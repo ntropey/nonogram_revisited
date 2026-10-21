@@ -6,6 +6,9 @@
  */
 import { mkdir, readdir, readFile, writeFile, copyFile, rm } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
+import { learnPages } from './learn.mjs';
+import { manualPage } from './manual.mjs';
+import { techniquePages } from './techniques.mjs';
 
 const SRC_DIR = resolve(import.meta.dirname, '..'); // packages/website
 const ROOT = resolve(SRC_DIR, '..', '..'); // workspace root
@@ -33,7 +36,8 @@ const CSS = `
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { background: #0f172a; color: #f8fafc; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; line-height: 1.5; }
 body { padding: 1rem; max-width: 900px; margin: 0 auto; }
-header { border-bottom: 1px solid #334155; padding-bottom: 1rem; margin-bottom: 1.5rem; display: flex; gap: 1rem; align-items: center; }
+header { border-bottom: 1px solid #334155; padding-bottom: 1rem; margin-bottom: 1.5rem; display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; }
+header .nav { margin-bottom: 0; align-items: center; }
 a { color: #38bdf8; text-decoration: underline; }
 a:hover { color: #7dd3fc; }
 h1 { font-size: 1.75rem; letter-spacing: 0.05em; margin-bottom: 0.5rem; }
@@ -42,22 +46,44 @@ p { margin: 0.75rem 0; color: #e2e8f0; }
 ul { margin: 0.75rem 0 0.75rem 1.5rem; color: #e2e8f0; }
 li { margin: 0.35rem 0; }
 .nav { display: flex; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1.5rem; }
-.nav a { color: #cbd5e1; text-decoration: none; border: 1px solid #334155; padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.9rem; }
+.nav a { white-space: nowrap; color: #cbd5e1; text-decoration: none; border: 1px solid #334155; padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.9rem; }
 .nav a:hover { border-color: #38bdf8; color: #38bdf8; }
 .play-link { display: inline-block; margin-top: 1rem; background: #38bdf8; color: #022c35; padding: 0.6rem 1rem; border-radius: 6px; text-decoration: none; font-weight: 600; }
 .play-link:hover { background: #7dd3fc; }
 .tech { border: 1px solid #334155; border-radius: 8px; padding: 1rem; margin: 1rem 0; background: #1e293b; }
 .tech h3 { color: #38bdf8; margin-bottom: 0.5rem; }
+.lead { font-size: 1.1rem; color: #cbd5e1; }
+.crumbs { font-size: 0.85rem; color: #94a3b8; margin: 0 0 0.5rem; }
+.crumbs a { color: #94a3b8; }
+.level { display: inline-block; font-size: 0.75rem; font-weight: 600; padding: 0.1rem 0.6rem; border: 1px solid #334155; border-radius: 999px; color: #94a3b8; margin: 0; }
+.level-1 { color: #4ade80; border-color: #4ade80; } .level-2 { color: #facc15; border-color: #facc15; }
+.level-3 { color: #fb923c; border-color: #fb923c; } .level-4, .level-5 { color: #f87171; border-color: #f87171; }
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 0.75rem; margin: 1rem 0; }
+.card { display: flex; flex-direction: column; gap: 0.35rem; padding: 0.9rem 1rem; background: #1e293b; border: 1px solid #334155; border-radius: 8px; color: #e2e8f0; text-decoration: none; font-size: 0.9rem; }
+.card:hover { border-color: #38bdf8; }
+.card strong { color: #f8fafc; font-size: 1rem; }
+figure { margin: 1.25rem 0; padding: 1rem; background: #1e293b; border: 1px solid #334155; border-radius: 8px; overflow-x: auto; }
+figure svg, .diagram { max-width: 100%; height: auto; display: block; margin: 0 auto; }
+figcaption { margin-top: 0.75rem; font-size: 0.85rem; color: #94a3b8; text-align: center; }
+.pager { display: flex; justify-content: space-between; gap: 1rem; margin: 1.5rem 0 0; font-size: 0.9rem; }
+.steps { margin: 0.75rem 0 0.75rem 1.5rem; } .steps li { margin: 0.6rem 0; }
+.toc { display: flex; gap: 0.5rem; flex-wrap: wrap; margin: 1rem 0; } .toc a { font-size: 0.85rem; padding: 0.2rem 0.6rem; border: 1px solid #334155; border-radius: 6px; text-decoration: none; }
+ol { margin: 0.75rem 0 0.75rem 1.5rem; color: #e2e8f0; } ol li { margin: 0.35rem 0; }
+kbd { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.85em; padding: 0.05rem 0.4rem; border: 1px solid #475569; border-bottom-width: 2px; border-radius: 4px; background: #1e293b; }
+table { border-collapse: collapse; margin: 0.75rem 0; } th, td { text-align: left; padding: 0.4rem 1rem 0.4rem 0; border-bottom: 1px solid #334155; }
+code { background: #1e293b; padding: 0.05rem 0.35rem; border-radius: 4px; }
+@media (max-width: 640px) { header { flex-direction: column; align-items: flex-start; } }
 `;
 
 /** Shared page shell. */
-function shell({ title, body, active }) {
+function shell({ title, body, active, description }) {
   return `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>${title} — Nonogram Revisited</title>
+${description ? `<meta name="description" content="${description.replace(/"/g, '&quot;')}" />\n` : ''}
 <style>${CSS}</style>
 </head>
 <body>
@@ -81,6 +107,9 @@ function shell({ title, body, active }) {
 }
 
 const pages = [
+  ...techniquePages,
+  ...learnPages,
+  manualPage,
   {
     path: 'index.html',
     title: 'Nonogram Revisited',
@@ -101,92 +130,9 @@ settings in localStorage.</p>
 <h2>Site</h2>
 <ul>
 <li><a href="/techniques/">Technique guides</a> with inline SVG line-deduction diagrams</li>
-<li><a href="/learn/">Learn pages</a></li>
-<li><a href="/manual/">Manual</a></li>
+<li><a href="/learn/">Learn pages</a>: how Nonograms work and a solving routine</li>
+<li><a href="/manual/">Manual</a>: the app's tools, Coach, Why? prover and shortcuts</li>
 </ul>
-`,
-  },
-  {
-    path: 'techniques/index.html',
-    title: 'Solving Techniques',
-    active: 'techniques',
-    body: `
-<h1>Solving Techniques</h1>
-<p>Nonogram Revisited applies nine human-style techniques in ascending difficulty:</p>
-<div class="tech">
-<h3>1. Full Line &amp; Zero Line</h3>
-<p>A line with clue <code>0</code> is entirely crossed out. A line whose clues plus mandatory 1-cell
-gaps exactly span the line is filled immediately.</p>
-</div>
-<div class="tech">
-<h3>2. Simple Boxes (Clue Overlap)</h3>
-<p>Pack a line's clues as far left/top and as far right/bottom as possible; any cell covered by the
-same block in both extremes must be filled.</p>
-</div>
-<div class="tech">
-<h3>3. Simple Spaces (Block Length Limit)</h3>
-<p>Cross out any cell no block can reach, or inside a gap shorter than any block that could fit.</p>
-</div>
-<div class="tech">
-<h3>4. Forcing (Edge &amp; Wall Extension)</h3>
-<p>A filled cell near an edge or next to a crossed wall forces its block to extend inward.</p>
-</div>
-<div class="tech">
-<h3>5. Glue &amp; Puncturing</h3>
-<p>Filled cells glue a block over neighbors; a completed block is punctured by crosses on either side.</p>
-</div>
-<div class="tech">
-<h3>6. Joining &amp; Splitting Blocks</h3>
-<p>Join separated filled groups that must share a block; split with a cross when joining would exceed
-the clue length.</p>
-</div>
-<div class="tech">
-<h3>7. Mercury (Bouncing)</h3>
-<p>Starting a block next to a wall that would touch a filled cell right after it bounces away.</p>
-</div>
-<div class="tech">
-<h3>8. Edge Logic &amp; 2-Line Lookahead</h3>
-<p>Test a cell and trace its immediate effect on crossing lines; if an adjacent line breaks, the cell is resolved.</p>
-</div>
-<div class="tech">
-<h3>9. Line Contradiction (Bifurcation)</h3>
-<p>Assume a cell is filled or crossed and propagate forced line steps until a line has no valid
-placement, proving the opposite.</p>
-</div>
-<p><a class="play-link" href="/play/">Try it in the app &rarr;</a></p>
-`,
-  },
-  {
-    path: 'learn/index.html',
-    title: 'Learn',
-    active: 'learn',
-    body: `
-<h1>Learn Nonogram</h1>
-<p>New to Nonograms? Start here.</p>
-<ul>
-<li><strong>Goal:</strong> fill the grid so each row and column's filled blocks match its clues.</li>
-<li><strong>Filled:</strong> a block cell. <strong>Crossed:</strong> definitely empty.</li>
-<li><strong>Clues:</strong> the lengths of consecutive filled blocks, in order.</li>
-</ul>
-<p><a class="play-link" href="/play/">Open the app &rarr;</a></p>
-`,
-  },
-  {
-    path: 'manual/index.html',
-    title: 'Manual',
-    active: 'manual',
-    body: `
-<h1>Manual</h1>
-<p>Nonogram Revisited app reference.</p>
-<h2>Playing</h2>
-<p>Tap a cell to cycle: empty &rarr; filled &rarr; crossed out &rarr; empty.</p>
-<h2>Solver</h2>
-<p>Generate a puzzle, then ask the app to solve it. The solver runs in a Web Worker and reveals one
-human-style step at a time.</p>
-<h2>Settings</h2>
-<p>Stored in localStorage: highlights, auto-cross, sound, theme, and game mode. Do not rename these
-keys without a migration.</p>
-<p><a class="play-link" href="/play/">Open the app &rarr;</a></p>
 `,
   },
   {
@@ -211,8 +157,8 @@ keys without a migration.</p>
     active: 'privacy',
     body: `
 <h1>Privacy</h1>
-<p>Nonogram Revisited stores settings, saved games, and your library in your browser's
-<a>localStorage</a>. Nothing is sent to a server unless you explicitly load a shared puzzle URL.</p>
+<p>Nonogram Revisited stores settings and saved puzzles in your browser's local storage. Nothing you
+do in the app, such as the puzzles you play or your settings, is sent to a server.</p>
 <p>Ads load only after consent via the consent banner and Google Consent Mode v2 loader.</p>
 `,
   },
