@@ -46,6 +46,28 @@ export function randomBitmap(size: number, rand: () => number, density: number):
   return out;
 }
 
+/**
+ * Reject boards that are valid but dull: almost empty or full, or with many lines that are
+ * entirely blank or entirely filled (those solve themselves and give no puzzle).
+ */
+export function isInteresting(bits: readonly (0 | 1)[], size: number): boolean {
+  const filled = bits.reduce<number>((a, b) => a + b, 0);
+  const density = filled / bits.length;
+  if (density < 0.3 || density > 0.75) return false;
+  let trivial = 0;
+  for (let i = 0; i < size; i++) {
+    let rowSum = 0;
+    let colSum = 0;
+    for (let j = 0; j < size; j++) {
+      rowSum += bits[i * size + j];
+      colSum += bits[j * size + i];
+    }
+    if (rowSum === 0 || rowSum === size) trivial++;
+    if (colSum === 0 || colSum === size) trivial++;
+  }
+  return trivial <= Math.floor(size * 0.4);
+}
+
 export interface GenerateOptions {
   size: number;
   level?: DifficultyLevel;
@@ -60,6 +82,7 @@ export function generatePuzzle(opts: GenerateOptions): NonogramBoard {
   let fallback: NonogramBoard | null = null;
   for (let i = 0; i < attempts; i++) {
     const bits = randomBitmap(opts.size, rand, 0.45 + rand() * 0.2);
+    if (!isInteresting(bits, opts.size)) continue;
     const board = NonogramBoard.fromBitmap(opts.size, opts.size, bits);
     if (countSolutions(board.clone(), 2) !== 1) continue;
     const a = analyzePuzzle(board);
@@ -68,7 +91,7 @@ export function generatePuzzle(opts: GenerateOptions): NonogramBoard {
     if (opts.level === undefined || rated === opts.level) return board;
   }
   if (fallback) return fallback;
-  throw new Error('Could not generate a unique puzzle');
+  throw new Error('Could not generate a puzzle with a unique solution; try again or pick another size.');
 }
 
 /** Everyone gets the same puzzle for a given UTC date string `YYYY-MM-DD`. */

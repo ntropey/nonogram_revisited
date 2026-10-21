@@ -7,6 +7,7 @@ import {
   deserializePuzzle,
   generatePuzzle,
   getCompletedClues,
+  isInteresting,
   serializePuzzle,
   solveLineDP,
 } from '../src/index';
@@ -59,5 +60,29 @@ describe('solver and generator', () => {
     expect(serializePuzzle(a)).toBe(serializePuzzle(b));
     expect(countSolutions(a, 2)).toBe(1);
     expect(serializePuzzle(dailyPuzzle('2026-01-01', 5))).toBe(serializePuzzle(dailyPuzzle('2026-01-01', 5)));
+  });
+});
+
+describe('generator quality', () => {
+  it('is deterministic for a seed', () => {
+    const a = generatePuzzle({ size: 7, seed: 42 });
+    const b = generatePuzzle({ size: 7, seed: 42 });
+    expect(a.toDefinition().solution).toEqual(b.toDefinition().solution);
+  });
+
+  it('never returns a dull board and always a unique one', () => {
+    for (let seed = 1; seed <= 25; seed++) {
+      const size = 5 + (seed % 4);
+      const board = generatePuzzle({ size, seed });
+      const solution = board.toDefinition().solution!;
+      expect(isInteresting(solution, size)).toBe(true);
+      expect(countSolutions(board.clone(), 2)).toBe(1);
+    }
+  });
+
+  it('flags trivial bitmaps', () => {
+    expect(isInteresting(new Array(25).fill(1), 5)).toBe(false);
+    expect(isInteresting(new Array(25).fill(0), 5)).toBe(false);
+    expect(isInteresting([1, 0, 1, 0, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 0, 1, 1, 0, 1, 1, 0, 1, 0, 1], 5)).toBe(true);
   });
 });
