@@ -2,9 +2,14 @@ import { describe, expect, it } from 'vitest';
 import {
   cloneGame,
   computeCluesFromLine,
+  autoCrossCompleted,
+  completedLines,
   createGame,
   isSolved,
+  lineBetween,
+  paintCells,
   setCell,
+  strokeTarget,
   toggleCell,
   unknownCount,
 } from './game';
@@ -49,5 +54,44 @@ describe('game', () => {
     expect(isSolved(g)).toBe(false);
     const filled = setCell(setCell(setCell(setCell(g, 0, 1), 1, 1), 2, 1), 3, 1);
     expect(isSolved(filled)).toBe(true);
+  });
+});
+
+describe('painting', () => {
+  it('stroke target erases a matching mark, otherwise paints it', () => {
+    expect(strokeTarget(0, 'fill')).toBe(1);
+    expect(strokeTarget(1, 'fill')).toBe(0);
+    expect(strokeTarget(-1, 'fill')).toBe(1);
+    expect(strokeTarget(0, 'cross')).toBe(-1);
+    expect(strokeTarget(-1, 'cross')).toBe(0);
+    expect(strokeTarget(1, 'cross')).toBe(-1);
+  });
+
+  it('paintCells returns the same object when nothing changes', () => {
+    const g = createGame(2, 2, [[0], [0]], [[0], [0]]);
+    expect(paintCells(g, [0, 1], 0)).toBe(g);
+    const next = paintCells(g, [0, 1], 1);
+    expect(next.cells).toEqual([1, 1, 0, 0]);
+    expect(g.cells).toEqual([0, 0, 0, 0]);
+  });
+
+  it('flags completed lines and auto-crosses them', () => {
+    let g = createGame(3, 3, [[1], [1], [1]], [[1], [1], [1]]);
+    g = paintCells(g, [0], 1);
+    const done = completedLines(g);
+    expect(done.rows[0]).toBe(true);
+    expect(done.cols[0]).toBe(true);
+    const crossed = autoCrossCompleted(g);
+    expect(crossed.cells[1]).toBe(-1);
+    expect(crossed.cells[3]).toBe(-1);
+    expect(crossed.cells[4]).toBe(0);
+    expect(autoCrossCompleted(crossed)).toBe(crossed);
+  });
+
+  it('lineBetween follows the dominant axis', () => {
+    expect(lineBetween(0, 3, 5)).toEqual([0, 1, 2, 3]);
+    expect(lineBetween(3, 0, 5)).toEqual([3, 2, 1, 0]);
+    expect(lineBetween(0, 10, 5)).toEqual([0, 5, 10]);
+    expect(lineBetween(7, 7, 5)).toEqual([7]);
   });
 });

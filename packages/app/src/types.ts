@@ -48,7 +48,14 @@ export interface StoredGame {
   solution?: (0 | 1)[];
   createdAt: number;
   mode: GameMode;
+  /** Rated difficulty, when the generator/solver has rated this puzzle. */
+  level?: DifficultyLevel;
+  score?: number;
+  /** Set when the player completes the puzzle by hand (not when it is revealed). */
+  solvedAt?: number | null;
 }
+
+export type SolverStatus = 'idle' | 'solving' | 'generating';
 
 export interface StoredSettings extends AppSettings {}
 

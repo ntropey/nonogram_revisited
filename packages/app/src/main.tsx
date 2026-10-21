@@ -7,8 +7,9 @@ import { createRoot } from 'react-dom/client';
 import App from './App';
 import './index.css';
 
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/play/sw.js', { scope: '/play/' });
+if ('serviceWorker' in navigator && import.meta.env.PROD) {
+  const base = import.meta.env.BASE_URL;
+  navigator.serviceWorker.register(`${base}sw.js`, { scope: base });
 }
 
 const root = createRoot(document.getElementById('root') as HTMLElement);
