@@ -67,10 +67,13 @@ describe('NonogramStepFinder.findNextStep', () => {
   });
 
   it('respects disabledTechniques', () => {
-    // Every line here is a zero line -> all steps are FULL_ZERO_LINE; disabling it leaves none.
+    // Every line here is a zero line -> all line steps are FULL_ZERO_LINE; disable it plus the
+    // fallback techniques (Edge Lookahead / Contradiction) so nothing remains.
     const b = board(5, 1, [[0]], [[0], [0], [0], [0], [0]]);
     const finder = new NonogramStepFinder();
-    const step = finder.findNextStep(b, { disabledTechniques: new Set(['FULL_ZERO_LINE']) });
+    const step = finder.findNextStep(b, {
+      disabledTechniques: new Set(['FULL_ZERO_LINE', 'EDGE_LOOKAHEAD', 'CONTRADICTION']),
+    });
     expect(step).toBeNull();
   });
 });

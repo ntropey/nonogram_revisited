@@ -1,0 +1,16 @@
+{
+  "name": "@nonogram/website",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Nonogram Revisited static site generator (dependency-free .mjs) for nonogramrevisited.com",
+  "license": "GPL-3.0-or-later",
+  "type": "module",
+  "scripts": {
+    "build": "node src/build.mjs",
+    "test": "vitest run",
+    "typecheck": "node --check src/build.mjs"
+  },
+  "devDependencies": {
+    "vitest": "^5.0.5"
+  }
+}

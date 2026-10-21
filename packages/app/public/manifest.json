@@ -1,0 +1,10 @@
+{
+  "name": "Nonogram Revisited",
+  "short_name": "Nonogram",
+  "start_url": "/play/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "orientation": "any",
+  "icons": []
+}
