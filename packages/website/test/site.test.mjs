@@ -88,6 +88,19 @@ describe('manual', () => {
   });
 });
 
+describe('shell', () => {
+  it('gives every page a favicon, so browsers do not request a missing /favicon.ico', async () => {
+    const pages = (await listFiles(DIST, ['play'])).filter((f) => f.endsWith('.html'));
+    for (const f of pages) expect(await readFile(f, 'utf8'), relative(DIST, f)).toContain('rel="icon"');
+  });
+
+  it('remembers the consent choice instead of asking on every page', async () => {
+    const html = await readFile(join(DIST, 'index.html'), 'utf8');
+    expect(html).toContain("localStorage.setItem(KEY, choice)");
+    expect(html).toContain("className = 'consent'");
+  });
+});
+
 describe('site integrity', () => {
   it('has no broken internal links or anchors', async () => {
     const pages = (await listFiles(DIST, ['play'])).filter((f) => f.endsWith('.html'));

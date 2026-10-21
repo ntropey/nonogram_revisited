@@ -18,26 +18,42 @@ const SITE_URL = process.env.SITE_URL || 'https://nonogramrevisited.com/';
 
 /** Inlined consent banner + Google Consent Mode v2 loader (on every site page). */
 const CONSENT_MJS = `(function(){
-  window.__nonogram_consent = window.__nonogram_consent || { granted: false };
-  if (!window.__nonogram_consent.granted) {
-    const el = document.createElement('div');
-    el.style.cssText = 'position:fixed;inset:0 0 auto 0;z-index:9999;background:#0f172a;color:#f8fafc;padding:1rem;border-top:1px solid #334155;display:flex;gap:.75rem;justify-content:space-between;align-items:center;font-family:system-ui,Segoe UI,sans-serif;font-size:.9rem';
-    el.innerHTML = '<div>Nonogram Revisited uses optional analytics. Allow cookies?</div><div style="display:flex;gap:.5rem"><button id="nono-consent-yes">Yes</button><button id="nono-consent-no">No</button></div>';
-    document.body.appendChild(el);
-    document.getElementById('nono-consent-yes').onclick = () => { window.__nonogram_consent.granted = true; el.remove(); };
-    document.getElementById('nono-consent-no').onclick = () => { window.__nonogram_consent.granted = false; el.remove(); };
-  }
+  var KEY = 'nonogram.consent';
+  var saved = null;
+  try { saved = localStorage.getItem(KEY); } catch (e) {}
+  window.__nonogram_consent = { granted: saved === 'granted' };
+  if (saved === 'granted' || saved === 'declined') return;
+  var el = document.createElement('div');
+  el.className = 'consent';
+  el.setAttribute('role', 'dialog');
+  el.setAttribute('aria-label', 'Cookie consent');
+  el.innerHTML = '<p>Nonogram Revisited uses optional analytics. Allow cookies?</p><div><button type="button" data-consent="granted">Allow</button><button type="button" data-consent="declined">No thanks</button></div>';
+  el.addEventListener('click', function (e) {
+    var choice = e.target && e.target.getAttribute && e.target.getAttribute('data-consent');
+    if (!choice) return;
+    window.__nonogram_consent.granted = choice === 'granted';
+    try { localStorage.setItem(KEY, choice); } catch (err) {}
+    el.remove();
+  });
+  document.body.appendChild(el);
 })();`;
 
 /** Inlined gate script (age/consent gate referenced by AGENTS.md). */
 const GATE_MJS = `(function(){ window.__nonogram_gate = window.__nonogram_gate || { ready: true }; })();`;
 
 const CSS = `
+.consent { position: fixed; left: 0; right: 0; bottom: 0; z-index: 9999; display: flex; gap: 0.75rem 1rem; flex-wrap: wrap; align-items: center; justify-content: space-between; padding: 0.75rem 1rem; background: #1e293b; border-top: 1px solid #334155; box-shadow: 0 -8px 24px rgba(0,0,0,0.4); font-size: 0.9rem; }
+.consent p { margin: 0; }
+.consent div { display: flex; gap: 0.5rem; }
+.consent button { font: inherit; cursor: pointer; padding: 0.4rem 0.9rem; border-radius: 6px; border: 1px solid #334155; background: transparent; color: #f8fafc; }
+.consent button[data-consent="granted"] { background: #38bdf8; border-color: #38bdf8; color: #022c35; font-weight: 600; }
+.consent button:hover { border-color: #38bdf8; }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { background: #0f172a; color: #f8fafc; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; line-height: 1.5; }
 body { padding: 1rem; max-width: 900px; margin: 0 auto; }
 header { border-bottom: 1px solid #334155; padding-bottom: 1rem; margin-bottom: 1.5rem; display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; }
 header .nav { margin-bottom: 0; align-items: center; }
+header .play-link { margin-top: 0; padding: 0.35rem 0.9rem; font-size: 0.9rem; }
 a { color: #38bdf8; text-decoration: underline; }
 a:hover { color: #7dd3fc; }
 h1 { font-size: 1.75rem; letter-spacing: 0.05em; margin-bottom: 0.5rem; }
@@ -82,6 +98,7 @@ function shell({ title, body, active, description }) {
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230b1220'/%3E%3Crect x='5' y='5' width='10' height='10' rx='2' fill='%2338bdf8'/%3E%3Crect x='17' y='5' width='10' height='10' rx='2' fill='%23334155'/%3E%3Crect x='5' y='17' width='10' height='10' rx='2' fill='%23334155'/%3E%3Crect x='17' y='17' width='10' height='10' rx='2' fill='%2338bdf8'/%3E%3C/svg%3E" />
 <title>${title} — Nonogram Revisited</title>
 ${description ? `<meta name="description" content="${description.replace(/"/g, '&quot;')}" />\n` : ''}
 <style>${CSS}</style>
@@ -158,7 +175,8 @@ settings in localStorage.</p>
     body: `
 <h1>Privacy</h1>
 <p>Nonogram Revisited stores settings and saved puzzles in your browser's local storage. Nothing you
-do in the app, such as the puzzles you play or your settings, is sent to a server.</p>
+do in the app, such as the puzzles you play or your settings, is sent to a server. Your answer to
+the cookie banner is remembered in local storage too, so it only asks once.</p>
 <p>Ads load only after consent via the consent banner and Google Consent Mode v2 loader.</p>
 `,
   },
