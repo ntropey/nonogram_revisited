@@ -1,0 +1,52 @@
+name: Deploy site
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      gate:
+        description: 'Put the temporary password gate on the site (needs the SITE_PASSWORD secret)'
+        type: boolean
+        default: false
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: pages
+  cancel-in-progress: true
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 10
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @nonogram/app build
+      - name: Require the password secret when gating
+        if: ${{ inputs.gate && env.SITE_PASSWORD == '' }}
+        run: echo "Add the SITE_PASSWORD repository secret, or untick 'gate'." && exit 1
+        env:
+          SITE_PASSWORD: ${{ secrets.SITE_PASSWORD }}
+      - name: Website tests
+        run: pnpm --filter @nonogram/website build && pnpm --filter @nonogram/website test
+        env:
+          SITE_URL: https://nonogramrevisited.com/
+      - run: pnpm --filter @nonogram/website build
+        env:
+          SITE_URL: https://nonogramrevisited.com/
+          SITE_PASSWORD: ${{ inputs.gate && secrets.SITE_PASSWORD || '' }}
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: packages/website/dist
+      - id: deployment
+        uses: actions/deploy-pages@v5

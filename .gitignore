@@ -1,0 +1,7 @@
+node_modules/
+dist/
+coverage/
+*.log
+.DS_Store
+packages/app/scripts/gen-bank.mjs
+packages/website/scripts/gen-examples.mjs
