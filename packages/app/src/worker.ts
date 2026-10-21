@@ -3,19 +3,9 @@
  * Web Worker entry: runs the pure solver/generator off the main thread.
  * `import.meta.url`-based worker is wired by Vite.
  */
-import { handleMessage } from './solverApi';
-import type { WorkerMessage, WorkerReply } from './protocol';
+import { handleRequest } from './solverApi';
+import type { WorkerRequest } from './protocol';
 
-self.onmessage = (event: MessageEvent) => {
-  const { id, message } = event.data as { id: string; message: WorkerMessage };
-  let reply: WorkerReply;
-  try {
-    reply = handleMessage(message);
-  } catch (error) {
-    reply = {
-      type: 'ERROR',
-      payload: { message: error instanceof Error ? error.message : String(error) },
-    };
-  }
-  self.postMessage({ id, reply } as { id: string; reply: WorkerReply });
+self.onmessage = (event: MessageEvent<WorkerRequest>) => {
+  self.postMessage(handleRequest(event.data));
 };

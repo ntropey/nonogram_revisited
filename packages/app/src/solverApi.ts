@@ -11,7 +11,7 @@ import {
   type StepFinderOptions,
 } from '@nonogram/core';
 import type { PuzzleDefinition, SolveAnalysis } from '@nonogram/core';
-import type { WorkerMessage, WorkerReply } from './protocol';
+import type { WorkerMessage, WorkerReply, WorkerRequest, WorkerResponse } from './protocol';
 
 /** Handle a single worker message, returning the typed reply (or an error reply). */
 export function handleMessage(message: WorkerMessage): WorkerReply {
@@ -57,6 +57,18 @@ export function handleMessage(message: WorkerMessage): WorkerReply {
       }
       return { type: 'TRACE_RESULT', payload: traceHypothesis(board, message.payload.cell, message.payload.assumed) };
     }
+  }
+}
+
+/** Handle a request envelope; solver exceptions become ERROR replies. */
+export function handleRequest(request: WorkerRequest): WorkerResponse {
+  try {
+    return { id: request.id, reply: handleMessage(request.message) };
+  } catch (error) {
+    return {
+      id: request.id,
+      reply: { type: 'ERROR', payload: { message: error instanceof Error ? error.message : String(error) } },
+    };
   }
 }
 

@@ -26,8 +26,14 @@ export type WorkerReply =
   | { type: 'TRACE_RESULT'; payload: { conflict: boolean; deduced: 1 | -1 } | null }
   | { type: 'ERROR'; payload: { message: string } };
 
-export interface SolverPort {
-  postMessage(message: WorkerMessage): void;
-  onMessage(handler: (reply: WorkerReply) => void): void;
-  terminate(): void;
+/** What the client posts to the worker. */
+export interface WorkerRequest {
+  id: string;
+  message: WorkerMessage;
+}
+
+/** What the worker posts back. */
+export interface WorkerResponse {
+  id: string;
+  reply: WorkerReply;
 }

@@ -2,77 +2,90 @@
  * Nonogram Revisited. GPL-3.0-or-later; see LICENSE.
  * App-side message channel to the solver Web Worker. Keeps the UI thread free.
  */
-import type { SolverPort, WorkerMessage, WorkerReply } from './protocol';
+import type { WorkerMessage, WorkerReply, WorkerRequest, WorkerResponse } from './protocol';
 import type { GenerateOptions, PuzzleDefinition, SolveAnalysis, SolutionStep, TechniqueType } from '@nonogram/core';
 
-export class SolverClient implements SolverPort {
-  private worker: Worker;
-  private handlers = new Map<string, (reply: unknown) => void>();
+/** The slice of `Worker` the client needs; lets tests inject a fake. */
+export interface WorkerLike {
+  onmessage: ((event: MessageEvent<WorkerResponse>) => void) | null;
+  onerror: ((event: ErrorEvent) => void) | null;
+  postMessage(request: WorkerRequest): void;
+  terminate(): void;
+}
+
+type Payload<T extends WorkerReply['type']> = (WorkerReply & { type: T })['payload'];
+
+interface Pending {
+  resolve: (reply: WorkerReply) => void;
+  reject: (error: Error) => void;
+}
+
+export class SolverClient {
+  private worker: WorkerLike;
+  private pending = new Map<string, Pending>();
   private nextId = 0;
 
-  constructor() {
-    this.worker = new Worker(new URL('./worker.ts', import.meta.url), { type: 'module' });
-    this.worker.onmessage = (event: MessageEvent) => {
-      const { id, reply } = event.data as { id: string; reply: unknown };
-      const handler = this.handlers.get(id);
-      if (handler) {
-        handler(reply);
-        this.handlers.delete(id);
-      }
+  constructor(worker?: WorkerLike) {
+    this.worker =
+      worker ??
+      (new Worker(new URL('./worker.ts', import.meta.url), { type: 'module' }) as unknown as WorkerLike);
+    this.worker.onmessage = (event) => {
+      const { id, reply } = event.data;
+      const entry = this.pending.get(id);
+      if (!entry) return;
+      this.pending.delete(id);
+      if (reply.type === 'ERROR') entry.reject(new Error(reply.payload.message));
+      else entry.resolve(reply);
     };
-    this.worker.onerror = (error) => {
-      console.error('Solver worker error:', error);
+    this.worker.onerror = (event) => {
+      const error = new Error(event.message || 'Solver worker crashed');
+      for (const entry of this.pending.values()) entry.reject(error);
+      this.pending.clear();
     };
   }
 
-  /** Send a message and await the typed reply. */
-  request<T>(message: Omit<WorkerMessage, 'id'> & { id?: never }): Promise<T> {
+  /** Send a message and resolve with the reply payload of the expected type. */
+  private request<T extends WorkerReply['type']>(message: WorkerMessage, expected: T): Promise<Payload<T>> {
     const id = String(this.nextId++);
-    return new Promise((resolve, reject) => {
-      this.handlers.set(id, (reply) => {
-        if ((reply as { type?: string })?.type === 'ERROR') {
-          reject(new Error((reply as { payload?: { message?: string } }).payload?.message ?? 'Solver error'));
-        } else {
-          resolve(reply as T);
-        }
+    return new Promise<unknown>((resolve, reject) => {
+      this.pending.set(id, {
+        resolve: (reply) => {
+          if (reply.type === expected) resolve(reply.payload);
+          else reject(new Error(`Unexpected solver reply ${reply.type}`));
+        },
+        reject,
       });
-      this.worker.postMessage({ id, ...message } as unknown as WorkerMessage & { id: string });
-    });
+      this.worker.postMessage({ id, message });
+    }) as Promise<Payload<T>>;
   }
 
   solve(definition: PuzzleDefinition): Promise<SolveAnalysis> {
-    return this.request<SolveAnalysis>({ type: 'SOLVE', payload: { definition } });
+    return this.request({ type: 'SOLVE', payload: { definition } }, 'SOLVE_RESULT');
   }
 
   nextStep(
     definition: PuzzleDefinition,
     disabledTechniques?: readonly TechniqueType[],
   ): Promise<SolutionStep | null> {
-    return this.request<SolutionStep | null>({
-      type: 'STEP',
-      payload: { definition, disabledTechniques },
-    });
+    return this.request({ type: 'STEP', payload: { definition, disabledTechniques } }, 'STEP_RESULT');
   }
 
   generate(options: GenerateOptions): Promise<PuzzleDefinition> {
-    return this.request<PuzzleDefinition>({ type: 'GENERATE', payload: { options } });
+    return this.request({ type: 'GENERATE', payload: { options } }, 'GENERATE_RESULT');
   }
 
   countSolutions(definition: PuzzleDefinition, limit = 2): Promise<number> {
-    return this.request<number>({ type: 'COUNT_SOLUTIONS', payload: { definition, limit } });
+    return this.request({ type: 'COUNT_SOLUTIONS', payload: { definition, limit } }, 'COUNT_RESULT');
   }
 
-  /** Forward a raw message to the worker (SolverPort interface). */
-  postMessage(message: WorkerMessage): void {
-    this.worker.postMessage(message);
+  trace(definition: PuzzleDefinition, cell: number, assumed: 1 | -1) {
+    return this.request({ type: 'TRACE', payload: { definition, cell, assumed } }, 'TRACE_RESULT');
   }
 
   terminate(): void {
+    const error = new Error('Solver terminated');
+    for (const entry of this.pending.values()) entry.reject(error);
+    this.pending.clear();
     this.worker.terminate();
-  }
-
-  onMessage(handler: (reply: WorkerReply) => void): void {
-    // Not used by the promise-based client; kept for the SolverPort interface.
-    void handler;
   }
 }

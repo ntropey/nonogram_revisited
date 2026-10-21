@@ -23,7 +23,7 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-function isAsset(url: string) {
+function isAsset(url) {
   return /\.(js|css|png|svg|woff2?)$/.test(url);
 }
 
