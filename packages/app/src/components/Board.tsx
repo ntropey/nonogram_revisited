@@ -3,7 +3,7 @@
  * Nonogram board: one CSS grid holding the clue gutters and the cells, with drag painting.
  */
 import { memo, useMemo, useRef, useState } from 'react';
-import type { CellState } from '@nonogram/core';
+import type { CellState, SolutionStep } from '@nonogram/core';
 import { LEVEL_NAMES } from '@nonogram/core';
 import { completedLines, lineBetween, strokeTarget } from '../game';
 import type { Tool } from '../game';
@@ -12,6 +12,8 @@ import type { StoredGame } from '../types';
 
 interface BoardProps {
   game: StoredGame | null;
+  hint: SolutionStep | null;
+  mistakes: number[] | null;
   tool: Tool;
   locked: boolean;
   showHighlights: boolean;
@@ -24,10 +26,12 @@ interface BoardProps {
 
 const GUIDE_EVERY = 5;
 
-export function Board({ game, tool, locked, showHighlights, sound, onStrokeStart, onPaint, onStrokeEnd, onNew }: BoardProps) {
+export function Board({ game, hint, mistakes, tool, locked, showHighlights, sound, onStrokeStart, onPaint, onStrokeEnd, onNew }: BoardProps) {
   const [hover, setHover] = useState<number | null>(null);
   const stroke = useRef<{ target: CellState; last: number } | null>(null);
   const done = useMemo(() => (game ? completedLines(game) : null), [game]);
+
+  const marks = useMemo(() => buildMarks(hint, mistakes), [hint, mistakes]);
 
   if (!game || !done) {
     return (
@@ -49,7 +53,8 @@ export function Board({ game, tool, locked, showHighlights, sound, onStrokeStart
   const { width, height } = game;
   const maxRowClues = Math.max(...game.rowClues.map((c) => c.length));
   const maxColClues = Math.max(...game.colClues.map((c) => c.length));
-  const units = width + maxRowClues * 0.9;
+  const unitsW = width + maxRowClues * 0.9;
+  const unitsH = height + maxColClues * 0.9;
   const hoverRow = hover === null ? -1 : Math.floor(hover / width);
   const hoverCol = hover === null ? -1 : hover % width;
 
@@ -101,7 +106,7 @@ export function Board({ game, tool, locked, showHighlights, sound, onStrokeStart
       </div>
       <div
         className={`board${locked ? ' locked' : ''}${game.solvedAt ? ' solved' : ''}`}
-        style={{ '--units': units, '--cols': width } as React.CSSProperties}
+        style={{ '--units-w': unitsW, '--units-h': unitsH } as React.CSSProperties}
       >
         <div
           className="board-grid"
@@ -135,6 +140,7 @@ export function Board({ game, tool, locked, showHighlights, sound, onStrokeStart
               rowDone={done.rows[r]}
               guideBottom={guide(r, height) === 1}
               cells={game.cells}
+              marks={marks}
               hoverRow={showHighlights ? hoverRow : -1}
               hoverCol={showHighlights ? hoverCol : -1}
             />
@@ -158,12 +164,13 @@ interface RowProps {
   rowDone: boolean;
   guideBottom: boolean;
   cells: CellState[];
+  marks: Record<number, string> | null;
   hoverRow: number;
   hoverCol: number;
 }
 
 /** One row (clue + cells). Re-renders only when its own cells or highlight change. */
-const RowCells = memo(function RowCells({ r, width, clues, rowDone, guideBottom, cells, hoverRow, hoverCol }: RowProps) {
+const RowCells = memo(function RowCells({ r, width, clues, rowDone, guideBottom, cells, marks, hoverRow, hoverCol }: RowProps) {
   const rowHl = hoverRow === r;
   return (
     <>
@@ -181,6 +188,7 @@ const RowCells = memo(function RowCells({ r, width, clues, rowDone, guideBottom,
           rowHl || hoverCol === c ? 'hl' : '',
           c % GUIDE_EVERY === GUIDE_EVERY - 1 && c < width - 1 ? 'guide-r' : '',
           guideBottom ? 'guide-b' : '',
+          marks?.[idx] ?? '',
         ];
         return (
           <div
@@ -198,10 +206,26 @@ const RowCells = memo(function RowCells({ r, width, clues, rowDone, guideBottom,
 
 function rowPropsEqual(a: RowProps, b: RowProps): boolean {
   if (a.r !== b.r || a.width !== b.width || a.rowDone !== b.rowDone || a.guideBottom !== b.guideBottom) return false;
-  if (a.clues !== b.clues) return false;
+  if (a.clues !== b.clues || a.marks !== b.marks) return false;
   const rowHlChanged = (a.hoverRow === a.r) !== (b.hoverRow === b.r);
   if (rowHlChanged || a.hoverCol !== b.hoverCol) return false;
   const start = a.r * a.width;
   for (let i = start; i < start + a.width; i++) if (a.cells[i] !== b.cells[i]) return false;
   return true;
+}
+
+/** Per-cell CSS classes for a hint step (tints, anchors, results) or flagged mistakes. */
+function buildMarks(hint: SolutionStep | null, mistakes: number[] | null): Record<number, string> | null {
+  if (!hint && !mistakes) return null;
+  const out: Record<number, string> = {};
+  if (mistakes) for (const c of mistakes) out[c] = 'mistake';
+  if (hint) {
+    for (const t of hint.marks.tint) for (const c of t.cells) out[c] = `tint-${t.tone}`;
+    for (const m of hint.marks.fins) out[m.cell] = 'hint-fin';
+    for (const m of hint.marks.key) out[m.cell] = 'hint-key';
+    for (const m of hint.marks.elim) out[m.cell] = 'hint-elim';
+    for (const m of hint.marks.place) out[m.cell] = 'hint-place';
+    for (const ch of hint.changes) out[ch.cell] = ch.state === 1 ? 'hint-place' : 'hint-elim';
+  }
+  return out;
 }

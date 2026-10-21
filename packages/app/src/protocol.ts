@@ -13,7 +13,10 @@ import type {
 
 export type WorkerMessage =
   | { type: 'SOLVE'; payload: { definition: PuzzleDefinition } }
-  | { type: 'STEP'; payload: { definition: PuzzleDefinition; disabledTechniques?: readonly TechniqueType[] } }
+  | {
+      type: 'STEP';
+      payload: { definition: PuzzleDefinition; cells?: readonly CellState[]; disabledTechniques?: readonly TechniqueType[] };
+    }
   | { type: 'GENERATE'; payload: { options: GenerateOptions } }
   | { type: 'COUNT_SOLUTIONS'; payload: { definition: PuzzleDefinition; limit?: number } }
   | { type: 'TRACE'; payload: { definition: PuzzleDefinition; cell: number; assumed: 1 | -1 } };

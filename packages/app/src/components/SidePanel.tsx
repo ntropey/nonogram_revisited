@@ -2,6 +2,7 @@
  * Nonogram Revisited. GPL-3.0-or-later; see LICENSE.
  * Side panel: library of saved / generated puzzles.
  */
+import type { ReactNode } from 'react';
 import { LEVEL_NAMES } from '@nonogram/core';
 import type { StoredGame } from '../types';
 
@@ -10,14 +11,17 @@ export function SidePanel({
   activeId,
   onSelect,
   onDelete,
+  children,
 }: {
   games: StoredGame[];
   activeId: string | null;
   onSelect: (id: string) => void;
   onDelete: (id: string) => void;
+  children?: ReactNode;
 }) {
   return (
     <aside className="sidepanel">
+      {children}
       <h2>Library <span className="count">{games.length}</span></h2>
       {games.length === 0 && <p className="empty">Puzzles you generate are saved here.</p>}
       <ul>

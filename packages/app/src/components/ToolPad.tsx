@@ -18,6 +18,7 @@ interface ToolPadProps {
   busy: boolean;
   onGenerate: (size: number) => void;
   onSolve: () => void;
+  onHint: () => void;
   onUndo: () => void;
   onReset: () => void;
 }
@@ -32,6 +33,7 @@ export function ToolPad({
   busy,
   onGenerate,
   onSolve,
+  onHint,
   onUndo,
   onReset,
 }: ToolPadProps) {
@@ -49,6 +51,7 @@ export function ToolPad({
         </div>
         <button className="btn" onClick={onUndo} disabled={!canUndo || busy} title="Undo (Ctrl+Z)">Undo</button>
         <button className="btn" onClick={onReset} disabled={!hasGame || busy}>Reset</button>
+        <button className="btn" onClick={onHint} disabled={!hasGame || busy} title="Show the next deduction (H)">Hint</button>
         <button className="btn" onClick={onSolve} disabled={!hasGame || busy} title="Fill the board using the solver">Solve</button>
       </div>
       <div className="toolpad-group generator">

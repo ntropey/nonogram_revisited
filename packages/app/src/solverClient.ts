@@ -3,7 +3,7 @@
  * App-side message channel to the solver Web Worker. Keeps the UI thread free.
  */
 import type { WorkerMessage, WorkerReply, WorkerRequest, WorkerResponse } from './protocol';
-import type { GenerateOptions, PuzzleDefinition, SolveAnalysis, SolutionStep, TechniqueType } from '@nonogram/core';
+import type { CellState, GenerateOptions, PuzzleDefinition, SolveAnalysis, SolutionStep, TechniqueType } from '@nonogram/core';
 
 /** The slice of `Worker` the client needs; lets tests inject a fake. */
 export interface WorkerLike {
@@ -65,9 +65,10 @@ export class SolverClient {
 
   nextStep(
     definition: PuzzleDefinition,
+    cells?: readonly CellState[],
     disabledTechniques?: readonly TechniqueType[],
   ): Promise<SolutionStep | null> {
-    return this.request({ type: 'STEP', payload: { definition, disabledTechniques } }, 'STEP_RESULT');
+    return this.request({ type: 'STEP', payload: { definition, cells, disabledTechniques } }, 'STEP_RESULT');
   }
 
   generate(options: GenerateOptions): Promise<PuzzleDefinition> {

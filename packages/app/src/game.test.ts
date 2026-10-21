@@ -5,6 +5,7 @@ import {
   autoCrossCompleted,
   completedLines,
   createGame,
+  findMistakes,
   isSolved,
   lineBetween,
   paintCells,
@@ -93,5 +94,18 @@ describe('painting', () => {
     expect(lineBetween(3, 0, 5)).toEqual([3, 2, 1, 0]);
     expect(lineBetween(0, 10, 5)).toEqual([0, 5, 10]);
     expect(lineBetween(7, 7, 5)).toEqual([7]);
+  });
+});
+
+describe('findMistakes', () => {
+  it('flags marks that contradict the solution and ignores unknowns', () => {
+    const g = { ...createGame(2, 2, [[1], [1]], [[1], [1]]), solution: [1, 0, 0, 1] as (0 | 1)[] };
+    expect(findMistakes(g)).toEqual([]);
+    const marked = paintCells(paintCells(paintCells(g, [0], 1), [1], 1), [3], -1);
+    expect(findMistakes(marked)).toEqual([1, 3]);
+  });
+
+  it('reports nothing without a solution', () => {
+    expect(findMistakes(paintCells(createGame(1, 1, [[1]], [[1]]), [0], 1))).toEqual([]);
   });
 });

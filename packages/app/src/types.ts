@@ -55,6 +55,12 @@ export interface StoredGame {
   solvedAt?: number | null;
 }
 
+/** What the hint panel is showing. */
+export type Hint =
+  | { kind: 'step'; step: SolutionStep }
+  | { kind: 'mistakes'; cells: number[] }
+  | { kind: 'stuck' };
+
 export type SolverStatus = 'idle' | 'solving' | 'generating';
 
 export interface StoredSettings extends AppSettings {}

@@ -48,3 +48,18 @@ describe('SolverClient round trip', () => {
     await expect(pending).rejects.toThrow('terminated');
   });
 });
+
+describe('SolverClient hints', () => {
+  const def = { width: 2, height: 2, rowClues: [[2], [0]], colClues: [[1], [1]] };
+
+  it('finds the next step from a blank board', async () => {
+    const step = await new SolverClient(loopbackWorker()).nextStep(def);
+    expect(step).not.toBeNull();
+    expect(step!.changes.length).toBeGreaterThan(0);
+  });
+
+  it('returns null when the board is already complete', async () => {
+    const step = await new SolverClient(loopbackWorker()).nextStep(def, [1, 1, -1, -1]);
+    expect(step).toBeNull();
+  });
+});

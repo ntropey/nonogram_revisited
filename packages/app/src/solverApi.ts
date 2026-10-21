@@ -4,13 +4,13 @@
  */
 import {
   NonogramBoard,
+  NonogramStepFinder,
   analyzePuzzle,
   countSolutions,
   generatePuzzle,
   solveLineDP,
-  type StepFinderOptions,
 } from '@nonogram/core';
-import type { PuzzleDefinition, SolveAnalysis } from '@nonogram/core';
+import type { CellState, PuzzleDefinition, SolveAnalysis } from '@nonogram/core';
 import type { WorkerMessage, WorkerReply, WorkerRequest, WorkerResponse } from './protocol';
 
 /** Handle a single worker message, returning the typed reply (or an error reply). */
@@ -24,7 +24,7 @@ export function handleMessage(message: WorkerMessage): WorkerReply {
       return { type: 'SOLVE_RESULT', payload: analyzePuzzle(board) };
     }
     case 'STEP': {
-      const board = deserializeBoard(message.payload.definition);
+      const board = deserializeBoard(message.payload.definition, message.payload.cells);
       if (!board) {
         return { type: 'ERROR', payload: { message: 'Unable to deserialize puzzle definition.' } };
       }
@@ -33,7 +33,7 @@ export function handleMessage(message: WorkerMessage): WorkerReply {
         : undefined;
       return {
         type: 'STEP_RESULT',
-        payload: analyzePuzzle(board, { disabledTechniques: disabled } as StepFinderOptions).steps[0] ?? null,
+        payload: new NonogramStepFinder().findNextStep(board, { disabledTechniques: disabled }),
       };
     }
     case 'GENERATE': {
@@ -72,8 +72,9 @@ export function handleRequest(request: WorkerRequest): WorkerResponse {
   }
 }
 
-function deserializeBoard(def: PuzzleDefinition): NonogramBoard | null {
+function deserializeBoard(def: PuzzleDefinition, cells?: readonly CellState[]): NonogramBoard | null {
   return new NonogramBoard({
+    cells,
     width: def.width,
     height: def.height,
     rowClues: def.rowClues,

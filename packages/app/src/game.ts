@@ -174,3 +174,14 @@ export function lineBetween(from: number, to: number, width: number): number[] {
   }
   return out;
 }
+
+/** Cells that contradict the stored solution (filled where empty, crossed where filled). */
+export function findMistakes(game: GameState): number[] {
+  const sol = game.solution;
+  if (!sol) return [];
+  const bad: number[] = [];
+  game.cells.forEach((state, i) => {
+    if ((state === 1 && sol[i] !== 1) || (state === -1 && sol[i] === 1)) bad.push(i);
+  });
+  return bad;
+}

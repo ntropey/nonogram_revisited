@@ -5,15 +5,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { SolverClient } from './solverClient';
 import { loadGames, loadSettings, saveGames, saveSettings } from './store';
-import { autoCrossCompleted, isSolved } from './game';
+import { autoCrossCompleted, findMistakes, isSolved } from './game';
 import type { Tool } from './game';
 import { playSolved } from './sound';
-import type { AppSettings, SolverStatus, StoredGame } from './types';
+import type { AppSettings, Hint, SolverStatus, StoredGame } from './types';
 import type { CellState } from '@nonogram/core';
 import { Board } from './components/Board';
 import { TopBar } from './components/TopBar';
 import { ToolPad } from './components/ToolPad';
 import { SidePanel } from './components/SidePanel';
+import { HintPanel } from './components/HintPanel';
 import { paintCells } from './game';
 
 const MAX_GAMES = 50;
@@ -25,6 +26,7 @@ export default function App() {
   const [status, setStatus] = useState<SolverStatus>('idle');
   const [error, setError] = useState<string | null>(null);
   const [tool, setTool] = useState<Tool>('fill');
+  const [hint, setHint] = useState<Hint | null>(null);
   const [history, setHistory] = useState<Record<string, CellState[][]>>({});
   const solverRef = useRef<SolverClient | null>(null);
   const strokeStart = useRef<CellState[] | null>(null);
@@ -81,6 +83,7 @@ export default function App() {
       };
       setGames((all) => [game, ...all].slice(0, MAX_GAMES));
       setActiveId(game.id);
+      setHint(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not generate a puzzle.');
     } finally {
@@ -90,6 +93,7 @@ export default function App() {
 
   const handleStrokeStart = useCallback(() => {
     strokeStart.current = activeRef.current?.cells ?? null;
+    setHint(null);
   }, []);
 
   const handlePaint = useCallback((cells: readonly number[], target: CellState) => {
@@ -99,24 +103,27 @@ export default function App() {
     });
   }, [updateActive]);
 
-  const handleStrokeEnd = useCallback(() => {
-    const g = activeRef.current;
-    const before = strokeStart.current;
-    strokeStart.current = null;
-    if (!g || !before) return;
+  /** Apply auto-cross and win detection to `g`, store it, and record `before` for undo. */
+  const settle = useCallback((g: StoredGame, before: CellState[]) => {
     let next = g;
     if (settingsRef.current.autoCross) {
       const crossed = autoCrossCompleted(g);
       if (crossed !== g) next = { ...g, cells: crossed.cells };
     }
-    const solved = !g.solvedAt && isSolved(next);
-    if (solved) {
+    if (!g.solvedAt && isSolved(next)) {
       next = { ...next, solvedAt: Date.now() };
       if (settingsRef.current.sound) playSolved();
     }
-    if (next !== g) updateActive(() => next);
+    if (next !== activeRef.current) updateActive(() => next);
     if (before.some((c, i) => c !== g.cells[i])) pushHistory(g.id, before);
   }, [pushHistory, updateActive]);
+
+  const handleStrokeEnd = useCallback(() => {
+    const g = activeRef.current;
+    const before = strokeStart.current;
+    strokeStart.current = null;
+    if (g && before) settle(g, before);
+  }, [settle]);
 
   const handleUndo = useCallback(() => {
     const g = activeRef.current;
@@ -126,6 +133,7 @@ export default function App() {
     if (!prev) return;
     setHistory((h) => ({ ...h, [g.id]: stack.slice(0, -1) }));
     updateActive((cur) => ({ ...cur, cells: prev, solvedAt: null }));
+    setHint(null);
   }, [history, updateActive]);
 
   const handleReset = useCallback(() => {
@@ -133,6 +141,7 @@ export default function App() {
     if (!g || g.cells.every((c) => c === 0)) return;
     pushHistory(g.id, g.cells);
     updateActive((cur) => ({ ...cur, cells: cur.cells.map(() => 0 as CellState), solvedAt: null }));
+    setHint(null);
   }, [pushHistory, updateActive]);
 
   const handleSolve = useCallback(async () => {
@@ -151,6 +160,7 @@ export default function App() {
       });
       pushHistory(g.id, g.cells);
       updateActive((cur) => ({ ...cur, cells: analysis.finalCells }));
+      setHint(null);
       if (!analysis.solved) setError('The solver could not finish this puzzle with human techniques; showing its progress.');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Solver failed.');
@@ -166,7 +176,48 @@ export default function App() {
       return rest;
     });
     setActiveId((cur) => (cur === id ? null : cur));
+    setHint(null);
   }, []);
+
+  const handleSelect = useCallback((id: string) => {
+    setActiveId(id);
+    setHint(null);
+    setError(null);
+  }, []);
+
+  const handleHint = useCallback(async () => {
+    const g = activeRef.current;
+    if (!g) return;
+    const wrong = findMistakes(g);
+    if (wrong.length > 0) {
+      setHint({ kind: 'mistakes', cells: wrong });
+      return;
+    }
+    setStatus('solving');
+    setError(null);
+    try {
+      const step = await solver().nextStep(
+        { width: g.width, height: g.height, rowClues: g.rowClues, colClues: g.colClues, title: g.title },
+        g.cells,
+      );
+      setHint(step ? { kind: 'step', step } : { kind: 'stuck' });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not find a hint.');
+    } finally {
+      setStatus('idle');
+    }
+  }, [solver]);
+
+  const handleApplyHint = useCallback(() => {
+    const g = activeRef.current;
+    if (!g || !hint) return;
+    const cells = [...g.cells];
+    if (hint.kind === 'step') for (const ch of hint.step.changes) cells[ch.cell] = ch.state;
+    else if (hint.kind === 'mistakes') for (const i of hint.cells) cells[i] = 0;
+    else return;
+    setHint(null);
+    settle({ ...g, cells }, g.cells);
+  }, [hint, settle]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -176,13 +227,14 @@ export default function App() {
         e.preventDefault();
         handleUndo();
       } else if (!e.ctrlKey && !e.metaKey && !e.altKey) {
-        if (e.key === 'f') setTool('fill');
+        if (e.key === 'h') void handleHint();
+        else if (e.key === 'f') setTool('fill');
         else if (e.key === 'x') setTool('cross');
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [handleUndo]);
+  }, [handleUndo, handleHint]);
 
   const busy = status !== 'idle';
   const canUndo = (active && (history[active.id]?.length ?? 0) > 0) || false;
@@ -202,6 +254,7 @@ export default function App() {
             busy={busy}
             onGenerate={handleGenerate}
             onSolve={handleSolve}
+            onHint={handleHint}
             onUndo={handleUndo}
             onReset={handleReset}
           />
@@ -213,6 +266,8 @@ export default function App() {
           )}
           <Board
             game={active}
+            hint={hint?.kind === 'step' ? hint.step : null}
+            mistakes={hint?.kind === 'mistakes' ? hint.cells : null}
             tool={tool}
             locked={Boolean(active?.solvedAt) || busy}
             showHighlights={settings.showHighlights}
@@ -223,7 +278,9 @@ export default function App() {
             onNew={() => handleGenerate(active?.width ?? 10)}
           />
         </main>
-        <SidePanel games={games} activeId={activeId} onSelect={setActiveId} onDelete={handleDelete} />
+        <SidePanel games={games} activeId={activeId} onSelect={handleSelect} onDelete={handleDelete}>
+          {hint && <HintPanel hint={hint} width={active?.width ?? 1} onApply={handleApplyHint} onDismiss={() => setHint(null)} />}
+        </SidePanel>
       </div>
     </div>
   );
