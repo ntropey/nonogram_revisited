@@ -14,11 +14,11 @@ pnpm workspace, Node >= 20 (CI and the site build use Node 22), TypeScript, ESM 
   line solver, human-style technique step finder, uniqueness verifier, difficulty rater, and
   date-seeded generator.
 - `packages/app` — the PWA (React 19 + Vite 8). The app UI; runs the solver/generator in a Web Worker.
-  `src/components/` holds the UI pieces (top bar, board, tool pad, side panel, dialogs), `game.ts`
-  the pure game state, `store.ts` the localStorage helpers, `ui.ts` settings and shared types,
-  `public/sw.js` the service worker.
+  `src/components/` holds the UI pieces (top bar, board, tool pad, hint panel, side panel), `game.ts`
+  the pure game state, `coach.ts` the Coach/Prover logic, `store.ts` the localStorage helpers,
+  `types.ts` settings and shared types, `public/sw.js` the service worker (plain JavaScript).
 - `packages/website` — a dependency-free static site generator (plain `.mjs`). Pages: home, the
-  technique guides (`techniques.mjs`, with inline SVG line-deduction diagrams), the Learn pages
+  technique guides (`techniques.mjs`, with inline SVG diagrams from `diagrams.mjs`), the Learn pages
   (`learn.mjs`), the manual (`manual.mjs`), about/privacy, and the app copied to `/play/`.
 - `docs/` — `PORT-PLAN.md` (status and roadmap), `LICENSE-AUDIT.md`.
 
@@ -54,15 +54,16 @@ Before finishing a change, run `pnpm typecheck` and `pnpm test`, and the affecte
 - **Game logic is pure.** `packages/app/src/game.ts` is pure and unit-tested; keep UI concerns out of
   it.
 - **The website is generated.** `packages/website/src/build.mjs` writes every page from string
-  literals and emits no separate JS assets (scripts are inlined, e.g. `gate.mjs`, `consent.mjs`).
+  literals and emits no separate JS assets (the consent and gate scripts are string constants in `build.mjs`, inlined into each page).
   `/play/` is the app's own Vite build copied verbatim.
 - **The manual documents the app.** `packages/website/src/manual.mjs` must be kept in step with the
-  app's behavior.
+  app's behavior. A website test checks its keyboard shortcuts against `App.tsx`, and that every
+  technique diagram shows a deduction the engine really makes.
 - **Stored values are a contract.** Settings, saved games, the library and the game mode live in the
   browser's localStorage. Do not rename stored keys without migration.
 - **The service worker** (`packages/app/public/sw.js`) fetches pages network-first and hashed assets
   cache-first, so a deploy shows on the next visit and the app works offline.
-- **Ads load only after consent.** `consent.mjs` adds the consent banner and Google Consent Mode v2
+- **Ads load only after consent.** The consent script in `build.mjs` adds the consent banner and Google Consent Mode v2
   loader to every site page.
 
 ## Coding conventions
