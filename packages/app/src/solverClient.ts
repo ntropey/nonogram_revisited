@@ -79,8 +79,9 @@ export class SolverClient {
     return this.request({ type: 'COUNT_SOLUTIONS', payload: { definition, limit } }, 'COUNT_RESULT');
   }
 
-  trace(definition: PuzzleDefinition, cell: number, assumed: 1 | -1) {
-    return this.request({ type: 'TRACE', payload: { definition, cell, assumed } }, 'TRACE_RESULT');
+  /** Assume `assumed` in `cell`; resolves with the contradiction it forces, or null if none follows from line logic. */
+  trace(definition: PuzzleDefinition, cells: readonly CellState[], cell: number, assumed: 1 | -1) {
+    return this.request({ type: 'TRACE', payload: { definition, cells, cell, assumed } }, 'TRACE_RESULT');
   }
 
   terminate(): void {

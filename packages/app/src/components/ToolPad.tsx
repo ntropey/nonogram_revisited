@@ -5,14 +5,14 @@
 import { useState } from 'react';
 import { LEVEL_NAMES } from '@nonogram/core';
 import type { DifficultyLevel } from '@nonogram/core';
-import type { Tool } from '../game';
+import type { PaintMode } from '../game';
 import type { AppSettings } from '../types';
 
 interface ToolPadProps {
   settings: AppSettings;
   onSetSettings: (s: AppSettings) => void;
-  tool: Tool;
-  onSetTool: (t: Tool) => void;
+  tool: PaintMode;
+  onSetTool: (t: PaintMode) => void;
   hasGame: boolean;
   canUndo: boolean;
   busy: boolean;
@@ -48,10 +48,13 @@ export function ToolPad({
           <button className={tool === 'cross' ? 'on' : ''} onClick={() => onSetTool('cross')} title="Cross out (X)" aria-pressed={tool === 'cross'}>
             <span className="swatch cross">×</span> Cross
           </button>
+          <button className={tool === 'prove' ? 'on' : ''} onClick={() => onSetTool('prove')} title="Ask why a cell is or isn’t filled (P)" aria-pressed={tool === 'prove'}>
+            <span className="swatch why">?</span> Why?
+          </button>
         </div>
         <button className="btn" onClick={onUndo} disabled={!canUndo || busy} title="Undo (Ctrl+Z)">Undo</button>
         <button className="btn" onClick={onReset} disabled={!hasGame || busy}>Reset</button>
-        <button className="btn" onClick={onHint} disabled={!hasGame || busy} title="Show the next deduction (H)">Hint</button>
+        <button className="btn" onClick={onHint} disabled={!hasGame || busy} title="Coach: get a step-by-step hint (H)">Coach</button>
         <button className="btn" onClick={onSolve} disabled={!hasGame || busy} title="Fill the board using the solver">Solve</button>
       </div>
       <div className="toolpad-group generator">

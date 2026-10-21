@@ -108,6 +108,8 @@ export function getLineCells(game: GameState, axis: 'row' | 'col', index: number
 }
 
 export type Tool = 'fill' | 'cross';
+/** The toolbar's modes: the two paint tools plus the Prover ("Why?"). */
+export type PaintMode = Tool | 'prove';
 
 /**
  * State a drag stroke paints, decided by the first cell it touches: pressing a cell that already holds

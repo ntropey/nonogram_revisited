@@ -131,6 +131,7 @@ button, input, select { font: inherit; color: inherit; }
 .swatch { width: 0.9rem; height: 0.9rem; border-radius: 3px; display: inline-grid; place-items: center; font-size: 0.85rem; line-height: 1; }
 .swatch.fill { background: var(--filled); }
 .swatch.cross { color: var(--cross); font-weight: 700; }
+.swatch.why { color: var(--accent); font-weight: 700; }
 
 .notice {
   margin: 0.6rem 1.1rem 0; padding: 0.5rem 0.8rem; border-radius: 8px; font-size: 0.85rem;
@@ -205,13 +206,14 @@ button, input, select { font: inherit; color: inherit; }
 
 /* ---------- Hints ---------- */
 .hint-panel {
-  padding: 0.75rem 0.85rem; border-radius: var(--radius); flex-shrink: 0;
+  position: relative; padding: 0.75rem 2rem 0.75rem 0.85rem; border-radius: var(--radius); flex-shrink: 0;
   background: var(--accent-soft); border: 1px solid color-mix(in srgb, var(--accent) 55%, var(--border));
   display: flex; flex-direction: column; gap: 0.4rem;
 }
 .hint-panel p { margin: 0; font-size: 0.88rem; line-height: 1.45; }
 .hint-head { display: flex; align-items: center; gap: 0.6rem; }
 .hint-changes { color: var(--muted); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.78rem !important; }
+.hint-close { position: absolute; top: 0.3rem; right: 0.3rem; color: var(--muted); }
 .hint-actions { display: flex; gap: 0.5rem; margin-top: 0.2rem; }
 .badge { white-space: nowrap; font-size: 0.68rem; padding: 0.1rem 0.5rem; border-radius: 999px; border: 1px solid var(--border); color: var(--muted); }
 .badge.easy { color: var(--good); border-color: var(--good); }
@@ -229,6 +231,17 @@ button, input, select { font: inherit; color: inherit; }
     linear-gradient(-45deg, transparent 44%, var(--cross) 44% 56%, transparent 56%); opacity: 0.6; }
 .cell.mistake { background: color-mix(in srgb, var(--danger) 60%, var(--cell)); box-shadow: inset 0 0 0 3px var(--danger); animation: blink 1s ease-in-out infinite; }
 @keyframes blink { 50% { opacity: 0.6; } }
+
+/* ---------- Coach & Prover ---------- */
+.coach-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--accent); font-weight: 700; }
+.stage-dots { display: inline-flex; gap: 4px; }
+.stage-dots i { width: 8px; height: 8px; border-radius: 50%; background: var(--border); }
+.stage-dots i.on { background: var(--accent); }
+.trace { display: flex; flex-direction: column; gap: 0.25rem; padding-top: 0.35rem; border-top: 1px solid color-mix(in srgb, var(--accent) 25%, var(--border)); }
+.trace-q { font-size: 0.78rem; font-weight: 700; color: var(--accent); }
+.trace ol { margin: 0; padding-left: 1.2rem; font-size: 0.8rem; color: var(--muted); display: flex; flex-direction: column; gap: 0.15rem; }
+.trace-none { color: var(--muted); }
+.board.probing .cell { cursor: help; }
 
 /* ---------- Library ---------- */
 .sidepanel {

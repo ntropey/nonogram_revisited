@@ -63,3 +63,19 @@ describe('SolverClient hints', () => {
     expect(step).toBeNull();
   });
 });
+
+describe('SolverClient prover', () => {
+  const def = { width: 3, height: 1, rowClues: [[3]], colClues: [[1], [1], [1]] };
+
+  it('returns the contradiction when crossing out a forced cell', async () => {
+    const client = new SolverClient(loopbackWorker());
+    const trace = await client.trace(def, [0, 0, 0], 0, -1);
+    expect(trace).not.toBeNull();
+    expect(trace!.deduced).toBe(1);
+    expect(trace!.conflictLine).toEqual({ axis: 'row', index: 0 });
+  });
+
+  it('returns null when the assumption is consistent', async () => {
+    expect(await new SolverClient(loopbackWorker()).trace(def, [0, 0, 0], 0, 1)).toBeNull();
+  });
+});

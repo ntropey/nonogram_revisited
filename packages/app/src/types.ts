@@ -4,6 +4,7 @@
  */
 import type {
   CellState,
+  ContradictionTrace,
   DifficultyLevel,
   LineAxis,
   LineRef,
@@ -57,7 +58,10 @@ export interface StoredGame {
 
 /** What the hint panel is showing. */
 export type Hint =
-  | { kind: 'step'; step: SolutionStep }
+  /** Coach: `stage` runs 1 (where to look) to 4 (the move). */
+  | { kind: 'step'; step: SolutionStep; stage: 1 | 2 | 3 | 4 }
+  /** Prover: what happens if `cell` were filled (`fill`) or crossed out (`cross`). */
+  | { kind: 'proof'; cell: number; fill: ContradictionTrace | null; cross: ContradictionTrace | null }
   | { kind: 'mistakes'; cells: number[] }
   | { kind: 'stuck' };
 

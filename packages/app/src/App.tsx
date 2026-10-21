@@ -6,7 +6,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { SolverClient } from './solverClient';
 import { loadGames, loadSettings, saveGames, saveSettings } from './store';
 import { autoCrossCompleted, findMistakes, isSolved } from './game';
-import type { Tool } from './game';
+import type { PaintMode } from './game';
+import { coachMarks, mistakeMarks, proofMarks, provenState } from './coach';
+import type { CellMarks } from './coach';
 import { playSolved } from './sound';
 import type { AppSettings, Hint, SolverStatus, StoredGame } from './types';
 import type { CellState } from '@nonogram/core';
@@ -25,7 +27,7 @@ export default function App() {
   const [activeId, setActiveId] = useState<string | null>(() => loadGames()[0]?.id ?? null);
   const [status, setStatus] = useState<SolverStatus>('idle');
   const [error, setError] = useState<string | null>(null);
-  const [tool, setTool] = useState<Tool>('fill');
+  const [tool, setTool] = useState<PaintMode>('fill');
   const [hint, setHint] = useState<Hint | null>(null);
   const [history, setHistory] = useState<Record<string, CellState[][]>>({});
   const solverRef = useRef<SolverClient | null>(null);
@@ -200,9 +202,39 @@ export default function App() {
         { width: g.width, height: g.height, rowClues: g.rowClues, colClues: g.colClues, title: g.title },
         g.cells,
       );
-      setHint(step ? { kind: 'step', step } : { kind: 'stuck' });
+      setHint(step ? { kind: 'step', step, stage: 1 } : { kind: 'stuck' });
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not find a hint.');
+    } finally {
+      setStatus('idle');
+    }
+  }, [solver]);
+
+  const handleNextStage = useCallback(() => {
+    setHint((h) => (h?.kind === 'step' && h.stage < 4 ? { ...h, stage: (h.stage + 1) as 1 | 2 | 3 | 4 } : h));
+  }, []);
+
+  const handleProbe = useCallback(async (cell: number) => {
+    const g = activeRef.current;
+    if (!g) return;
+    if (g.cells[cell] !== 0) {
+      setError('Pick an empty cell to ask about.');
+      return;
+    }
+    const wrong = findMistakes(g);
+    if (wrong.length > 0) {
+      setHint({ kind: 'mistakes', cells: wrong });
+      return;
+    }
+    setStatus('solving');
+    setError(null);
+    try {
+      const def = { width: g.width, height: g.height, rowClues: g.rowClues, colClues: g.colClues, title: g.title };
+      const client = solver();
+      const [fill, cross] = await Promise.all([client.trace(def, g.cells, cell, 1), client.trace(def, g.cells, cell, -1)]);
+      setHint({ kind: 'proof', cell, fill, cross });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not run the prover.');
     } finally {
       setStatus('idle');
     }
@@ -214,7 +246,11 @@ export default function App() {
     const cells = [...g.cells];
     if (hint.kind === 'step') for (const ch of hint.step.changes) cells[ch.cell] = ch.state;
     else if (hint.kind === 'mistakes') for (const i of hint.cells) cells[i] = 0;
-    else return;
+    else if (hint.kind === 'proof') {
+      const state = provenState(hint.fill, hint.cross);
+      if (state === null) return;
+      cells[hint.cell] = state;
+    } else return;
     setHint(null);
     settle({ ...g, cells }, g.cells);
   }, [hint, settle]);
@@ -230,11 +266,23 @@ export default function App() {
         if (e.key === 'h') void handleHint();
         else if (e.key === 'f') setTool('fill');
         else if (e.key === 'x') setTool('cross');
+        else if (e.key === 'p') setTool('prove');
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [handleUndo, handleHint]);
+
+  const gridMarks = useMemo<CellMarks | null>(() => {
+    if (!active || !hint) return null;
+    if (hint.kind === 'step') return coachMarks(hint.step, hint.stage, active.width, active.height);
+    if (hint.kind === 'mistakes') return mistakeMarks(hint.cells);
+    if (hint.kind === 'proof') {
+      const trace = hint.fill ?? hint.cross;
+      return trace ? { ...proofMarks(trace, active.width, active.height) } : { [hint.cell]: 'hint-key' };
+    }
+    return null;
+  }, [active, hint]);
 
   const busy = status !== 'idle';
   const canUndo = (active && (history[active.id]?.length ?? 0) > 0) || false;
@@ -266,9 +314,10 @@ export default function App() {
           )}
           <Board
             game={active}
-            hint={hint?.kind === 'step' ? hint.step : null}
-            mistakes={hint?.kind === 'mistakes' ? hint.cells : null}
-            tool={tool}
+            marks={gridMarks}
+            probe={tool === 'prove'}
+            onProbe={handleProbe}
+            tool={tool === 'prove' ? 'fill' : tool}
             locked={Boolean(active?.solvedAt) || busy}
             showHighlights={settings.showHighlights}
             sound={settings.sound}
@@ -279,7 +328,7 @@ export default function App() {
           />
         </main>
         <SidePanel games={games} activeId={activeId} onSelect={handleSelect} onDelete={handleDelete}>
-          {hint && <HintPanel hint={hint} width={active?.width ?? 1} onApply={handleApplyHint} onDismiss={() => setHint(null)} />}
+          {hint && <HintPanel hint={hint} width={active?.width ?? 1} onNext={handleNextStage} onApply={handleApplyHint} onDismiss={() => setHint(null)} />}
         </SidePanel>
       </div>
     </div>

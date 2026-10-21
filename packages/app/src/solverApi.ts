@@ -8,7 +8,7 @@ import {
   analyzePuzzle,
   countSolutions,
   generatePuzzle,
-  solveLineDP,
+  traceHypothesis,
 } from '@nonogram/core';
 import type { CellState, PuzzleDefinition, SolveAnalysis } from '@nonogram/core';
 import type { WorkerMessage, WorkerReply, WorkerRequest, WorkerResponse } from './protocol';
@@ -51,11 +51,14 @@ export function handleMessage(message: WorkerMessage): WorkerReply {
       };
     }
     case 'TRACE': {
-      const board = deserializeBoard(message.payload.definition);
+      const board = deserializeBoard(message.payload.definition, message.payload.cells);
       if (!board) {
         return { type: 'ERROR', payload: { message: 'Unable to deserialize puzzle definition.' } };
       }
-      return { type: 'TRACE_RESULT', payload: traceHypothesis(board, message.payload.cell, message.payload.assumed) };
+      return {
+        type: 'TRACE_RESULT',
+        payload: traceHypothesis(board, message.payload.cell, message.payload.assumed),
+      };
     }
   }
 }
@@ -82,46 +85,6 @@ function deserializeBoard(def: PuzzleDefinition, cells?: readonly CellState[]): 
     solution: def.solution,
     title: def.title,
   });
-}
-
-/** Test assuming `assumed` (`1` or `-1`) in `cell` and propagate 1D line DP until quiescence or conflict. */
-function traceHypothesis(
-  board: NonogramBoard,
-  cell: number,
-  assumed: 1 | -1,
-): { conflict: boolean; deduced: 1 | -1 } | null {
-  const work = board.clone();
-  work.cells[cell] = assumed;
-
-  for (let round = 0; round < 60; round++) {
-    let changed = false;
-    for (let r = 0; r < work.height; r++) {
-      const dp = solveLineDP(work.rowClues[r], work.getLineCells('row', r));
-      if (!dp.valid) {
-        return { conflict: true, deduced: assumed === 1 ? -1 : 1 };
-      }
-      if (dp.newChanges.length > 0) {
-        for (const ch of dp.newChanges) {
-          work.cells[work.linePosToCell('row', r, ch.pos)] = ch.state;
-        }
-        changed = true;
-      }
-    }
-    for (let c = 0; c < work.width; c++) {
-      const dp = solveLineDP(work.colClues[c], work.getLineCells('col', c));
-      if (!dp.valid) {
-        return { conflict: true, deduced: assumed === 1 ? -1 : 1 };
-      }
-      if (dp.newChanges.length > 0) {
-        for (const ch of dp.newChanges) {
-          work.cells[work.linePosToCell('col', c, ch.pos)] = ch.state;
-        }
-        changed = true;
-      }
-    }
-    if (!changed) break;
-  }
-  return { conflict: false, deduced: assumed === 1 ? -1 : 1 };
 }
 
 export type { SolveAnalysis };

@@ -3,17 +3,20 @@
  * Nonogram board: one CSS grid holding the clue gutters and the cells, with drag painting.
  */
 import { memo, useMemo, useRef, useState } from 'react';
-import type { CellState, SolutionStep } from '@nonogram/core';
+import type { CellState } from '@nonogram/core';
 import { LEVEL_NAMES } from '@nonogram/core';
 import { completedLines, lineBetween, strokeTarget } from '../game';
+import type { CellMarks } from '../coach';
 import type { Tool } from '../game';
 import { playTick } from '../sound';
 import type { StoredGame } from '../types';
 
 interface BoardProps {
   game: StoredGame | null;
-  hint: SolutionStep | null;
-  mistakes: number[] | null;
+  marks: CellMarks | null;
+  /** When true, pressing a cell asks the Prover about it instead of painting. */
+  probe: boolean;
+  onProbe: (cell: number) => void;
   tool: Tool;
   locked: boolean;
   showHighlights: boolean;
@@ -26,12 +29,10 @@ interface BoardProps {
 
 const GUIDE_EVERY = 5;
 
-export function Board({ game, hint, mistakes, tool, locked, showHighlights, sound, onStrokeStart, onPaint, onStrokeEnd, onNew }: BoardProps) {
+export function Board({ game, marks, probe, onProbe, tool, locked, showHighlights, sound, onStrokeStart, onPaint, onStrokeEnd, onNew }: BoardProps) {
   const [hover, setHover] = useState<number | null>(null);
   const stroke = useRef<{ target: CellState; last: number } | null>(null);
   const done = useMemo(() => (game ? completedLines(game) : null), [game]);
-
-  const marks = useMemo(() => buildMarks(hint, mistakes), [hint, mistakes]);
 
   if (!game || !done) {
     return (
@@ -75,6 +76,10 @@ export function Board({ game, hint, mistakes, tool, locked, showHighlights, soun
     const cell = cellAt(e);
     if (cell === null) return;
     e.preventDefault();
+    if (probe) {
+      onProbe(cell);
+      return;
+    }
     e.currentTarget.setPointerCapture(e.pointerId);
     const effective: Tool = e.button === 2 ? 'cross' : tool;
     const target = strokeTarget(game.cells[cell], effective);
@@ -105,7 +110,7 @@ export function Board({ game, hint, mistakes, tool, locked, showHighlights, soun
         </div>
       </div>
       <div
-        className={`board${locked ? ' locked' : ''}${game.solvedAt ? ' solved' : ''}`}
+        className={`board${locked ? ' locked' : ''}${probe ? ' probing' : ''}${game.solvedAt ? ' solved' : ''}`}
         style={{ '--units-w': unitsW, '--units-h': unitsH } as React.CSSProperties}
       >
         <div
@@ -164,7 +169,7 @@ interface RowProps {
   rowDone: boolean;
   guideBottom: boolean;
   cells: CellState[];
-  marks: Record<number, string> | null;
+  marks: CellMarks | null;
   hoverRow: number;
   hoverCol: number;
 }
@@ -212,20 +217,4 @@ function rowPropsEqual(a: RowProps, b: RowProps): boolean {
   const start = a.r * a.width;
   for (let i = start; i < start + a.width; i++) if (a.cells[i] !== b.cells[i]) return false;
   return true;
-}
-
-/** Per-cell CSS classes for a hint step (tints, anchors, results) or flagged mistakes. */
-function buildMarks(hint: SolutionStep | null, mistakes: number[] | null): Record<number, string> | null {
-  if (!hint && !mistakes) return null;
-  const out: Record<number, string> = {};
-  if (mistakes) for (const c of mistakes) out[c] = 'mistake';
-  if (hint) {
-    for (const t of hint.marks.tint) for (const c of t.cells) out[c] = `tint-${t.tone}`;
-    for (const m of hint.marks.fins) out[m.cell] = 'hint-fin';
-    for (const m of hint.marks.key) out[m.cell] = 'hint-key';
-    for (const m of hint.marks.elim) out[m.cell] = 'hint-elim';
-    for (const m of hint.marks.place) out[m.cell] = 'hint-place';
-    for (const ch of hint.changes) out[ch.cell] = ch.state === 1 ? 'hint-place' : 'hint-elim';
-  }
-  return out;
 }
