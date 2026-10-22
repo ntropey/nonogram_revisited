@@ -17,6 +17,7 @@ import { TopBar } from './components/TopBar';
 import { ToolPad } from './components/ToolPad';
 import { SidePanel } from './components/SidePanel';
 import { HintPanel } from './components/HintPanel';
+import { SolvedModal } from './components/SolvedModal';
 import { paintCells } from './game';
 
 const MAX_GAMES = 50;
@@ -30,6 +31,7 @@ export default function App() {
   const [tool, setTool] = useState<PaintMode>('fill');
   const [hint, setHint] = useState<Hint | null>(null);
   const [history, setHistory] = useState<Record<string, CellState[][]>>({});
+  const [showModal, setShowModal] = useState<boolean>(false);
   const solverRef = useRef<SolverClient | null>(null);
   const strokeStart = useRef<CellState[] | null>(null);
 
@@ -63,6 +65,7 @@ export default function App() {
   const handleGenerate = useCallback(async (size: number) => {
     setStatus('generating');
     setError(null);
+    setShowModal(false);
     try {
       const client = solver();
       const level = settingsRef.current.preferredDifficulty ?? undefined;
@@ -118,6 +121,7 @@ export default function App() {
     }
     if (!g.solvedAt && isSolved(next)) {
       next = { ...next, solvedAt: Date.now() };
+      setShowModal(true);
       if (settingsRef.current.sound) playSolved();
     }
     if (next !== activeRef.current) updateActive(() => next);
@@ -139,6 +143,7 @@ export default function App() {
     if (!prev) return;
     setHistory((h) => ({ ...h, [g.id]: stack.slice(0, -1) }));
     updateActive((cur) => ({ ...cur, cells: prev, solvedAt: null }));
+    setShowModal(false);
     setHint(null);
   }, [history, updateActive]);
 
@@ -147,6 +152,7 @@ export default function App() {
     if (!g || g.cells.every((c) => c === 0)) return;
     pushHistory(g.id, g.cells);
     updateActive((cur) => ({ ...cur, cells: cur.cells.map(() => 0 as CellState), solvedAt: null }));
+    setShowModal(false);
     setHint(null);
   }, [pushHistory, updateActive]);
 
@@ -161,35 +167,40 @@ export default function App() {
         height: g.height,
         rowClues: g.rowClues,
         colClues: g.colClues,
-        solution: g.solution,
         title: g.title,
       });
-      pushHistory(g.id, g.cells);
-      updateActive((cur) => ({ ...cur, cells: analysis.finalCells }));
-      setHint(null);
-      if (!analysis.solved) setError('The solver could not finish this puzzle with human techniques; showing its progress.');
+      if (analysis.solved && analysis.finalCells) {
+        pushHistory(g.id, g.cells);
+        updateActive((cur) => ({ ...cur, cells: analysis.finalCells, solvedAt: null }));
+        setHint(null);
+      } else {
+        setError('The solver could not completely deduce this puzzle.');
+      }
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Solver failed.');
+      setError(e instanceof Error ? e.message : 'Solve failed.');
     } finally {
       setStatus('idle');
     }
-  }, [pushHistory, solver, updateActive]);
-
-  const handleDelete = useCallback((id: string) => {
-    setGames((all) => all.filter((g) => g.id !== id));
-    setHistory((h) => {
-      const { [id]: _drop, ...rest } = h;
-      return rest;
-    });
-    setActiveId((cur) => (cur === id ? null : cur));
-    setHint(null);
-  }, []);
+  }, [solver, pushHistory, updateActive]);
 
   const handleSelect = useCallback((id: string) => {
     setActiveId(id);
     setHint(null);
-    setError(null);
+    setShowModal(false);
   }, []);
+
+  const handleDelete = useCallback((id: string) => {
+    setGames((all) => {
+      const next = all.filter((g) => g.id !== id);
+      if (activeId === id) setActiveId(next[0]?.id ?? null);
+      return next;
+    });
+    setHistory((h) => {
+      const copy = { ...h };
+      delete copy[id];
+      return copy;
+    });
+  }, [activeId]);
 
   const handleHint = useCallback(async () => {
     const g = activeRef.current;
@@ -335,6 +346,13 @@ export default function App() {
           {hint && <HintPanel hint={hint} width={active?.width ?? 1} onNext={handleNextStage} onApply={handleApplyHint} onDismiss={() => setHint(null)} />}
         </SidePanel>
       </div>
+      {showModal && active?.solvedAt && (
+        <SolvedModal
+          game={active}
+          onNew={() => handleGenerate(active.width)}
+          onClose={() => setShowModal(false)}
+        />
+      )}
     </div>
   );
 }

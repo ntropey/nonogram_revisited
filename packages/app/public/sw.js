@@ -5,7 +5,16 @@
  */
 const ASSET_CACHE = 'nonogram-assets-v1';
 const PAGE_CACHE = 'nonogram-pages-v1';
-const PRECACHE_URLS = ['/play/', '/play/index.html', '/play/manifest.json'];
+const PRECACHE_URLS = [
+  '/play/',
+  '/play/index.html',
+  '/play/manifest.json',
+  '/play/icon.svg',
+  '/play/icon-192.png',
+  '/play/icon-512.png',
+  '/play/apple-touch-icon.png',
+  '/play/icon-maskable-512.png'
+];
 
 // Install: precache the app shell.
 self.addEventListener('install', (event) => {

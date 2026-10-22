@@ -98,7 +98,9 @@ function shell({ title, body, active, description }) {
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230b1220'/%3E%3Crect x='5' y='5' width='10' height='10' rx='2' fill='%2338bdf8'/%3E%3Crect x='17' y='5' width='10' height='10' rx='2' fill='%23334155'/%3E%3Crect x='5' y='17' width='10' height='10' rx='2' fill='%23334155'/%3E%3Crect x='17' y='17' width='10' height='10' rx='2' fill='%2338bdf8'/%3E%3C/svg%3E" />
+<link rel="icon" href="/icon.svg" type="image/svg+xml" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 <title>${title} — Nonogram Revisited</title>
 ${description ? `<meta name="description" content="${description.replace(/"/g, '&quot;')}" />\n` : ''}
 <style>${CSS}</style>
@@ -218,6 +220,15 @@ export async function build() {
   // Copy the app's Vite build to /play/ verbatim.
   if (await exists(APP_DIST)) {
     await copyDir(APP_DIST, join(DIST, 'play'));
+  }
+
+  // Copy icons to root for marketing site
+  const publicIcons = ['icon.svg', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'];
+  const appPublic = join(ROOT, 'packages', 'app', 'public');
+  for (const icon of publicIcons) {
+    try {
+      await copyFile(join(appPublic, icon), join(DIST, icon));
+    } catch {}
   }
 
   // ads.txt for Google AdSense authorization

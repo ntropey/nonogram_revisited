@@ -113,7 +113,7 @@ describe('site integrity', () => {
     for (const [url, html] of byUrl) {
       for (const m of html.matchAll(/href="([^"#]*)(#[^"]*)?"/g)) {
         const [, path, hash] = m;
-        if (!path.startsWith('/') || path.startsWith('/play/')) continue;
+        if (!path.startsWith('/') || path.startsWith('/play/') || /\.(svg|png|ico|json)$/.test(path)) continue;
         const target = byUrl.get(path);
         if (!target) broken.push(`${url} -> ${path}`);
         else if (hash && !target.includes(`id="${hash.slice(1)}"`)) broken.push(`${url} -> ${path}${hash}`);

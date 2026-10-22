@@ -1,8 +1,9 @@
 /*
  * Nonogram Revisited. GPL-3.0-or-later; see LICENSE.
- * Nonogram board: one CSS grid holding the clue gutters and the cells, with drag painting.
+ * Nonogram board: one CSS grid holding the clue gutters and the cells, with drag painting,
+ * crosshair header highlights, roving tabindex keyboard navigation, and zoom controls for large boards.
  */
-import { memo, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useMemo, useRef, useState } from 'react';
 import type { CellState } from '@nonogram/core';
 import { LEVEL_NAMES } from '@nonogram/core';
 import { completedLines, lineBetween, strokeTarget } from '../game';
@@ -29,10 +30,73 @@ interface BoardProps {
 
 const GUIDE_EVERY = 5;
 
-export function Board({ game, marks, probe, onProbe, tool, locked, showHighlights, sound, onStrokeStart, onPaint, onStrokeEnd, onNew }: BoardProps) {
+export function Board({
+  game,
+  marks,
+  probe,
+  onProbe,
+  tool,
+  locked,
+  showHighlights,
+  sound,
+  onStrokeStart,
+  onPaint,
+  onStrokeEnd,
+  onNew,
+}: BoardProps) {
   const [hover, setHover] = useState<number | null>(null);
+  const [selectedCell, setSelectedCell] = useState<number>(0);
+  const [zoomLevel, setZoomLevel] = useState<number>(1);
   const stroke = useRef<{ target: CellState; last: number } | null>(null);
   const done = useMemo(() => (game ? completedLines(game) : null), [game]);
+
+  const paintSingle = useCallback(
+    (cell: number, effectiveTool: Tool) => {
+      if (!game || locked) return;
+      if (probe) {
+        onProbe(cell);
+        return;
+      }
+      const target = strokeTarget(game.cells[cell], effectiveTool);
+      onStrokeStart();
+      onPaint([cell], target);
+      onStrokeEnd();
+      if (sound) playTick();
+    },
+    [game, locked, probe, onProbe, onStrokeStart, onPaint, onStrokeEnd, sound],
+  );
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (!game) return;
+    const { width, height } = game;
+    const r = Math.floor(selectedCell / width);
+    const c = selectedCell % width;
+
+    let nextCell = selectedCell;
+    if (e.key === 'ArrowUp') {
+      nextCell = r > 0 ? (r - 1) * width + c : selectedCell;
+    } else if (e.key === 'ArrowDown') {
+      nextCell = r < height - 1 ? (r + 1) * width + c : selectedCell;
+    } else if (e.key === 'ArrowLeft') {
+      nextCell = c > 0 ? r * width + (c - 1) : selectedCell;
+    } else if (e.key === 'ArrowRight') {
+      nextCell = c < width - 1 ? r * width + (c + 1) : selectedCell;
+    } else if (e.key === ' ' || e.key === 'Enter') {
+      e.preventDefault();
+      paintSingle(selectedCell, tool);
+      return;
+    } else {
+      return;
+    }
+
+    if (nextCell !== selectedCell) {
+      e.preventDefault();
+      setSelectedCell(nextCell);
+      // Focus target cell element
+      const el = document.querySelector(`[data-cell="${nextCell}"]`) as HTMLElement | null;
+      el?.focus();
+    }
+  };
 
   if (!game || !done) {
     return (
@@ -44,7 +108,7 @@ export function Board({ game, marks, probe, onProbe, tool, locked, showHighlight
             ))}
           </div>
           <h2>Ready when you are</h2>
-          <p>Generate a puzzle to start. Drag to paint, right-click to cross out.</p>
+          <p>Generate a puzzle to start. Drag to paint, right-click to cross out, or use arrow keys and Space.</p>
           <button className="btn primary" onClick={onNew}>Generate a puzzle</button>
         </div>
       </section>
@@ -54,10 +118,13 @@ export function Board({ game, marks, probe, onProbe, tool, locked, showHighlight
   const { width, height } = game;
   const maxRowClues = Math.max(...game.rowClues.map((c) => c.length));
   const maxColClues = Math.max(...game.colClues.map((c) => c.length));
-  const unitsW = width + maxRowClues * 0.9;
-  const unitsH = height + maxColClues * 0.9;
-  const hoverRow = hover === null ? -1 : Math.floor(hover / width);
-  const hoverCol = hover === null ? -1 : hover % width;
+  const unitsW = (width + maxRowClues * 0.9) / zoomLevel;
+  const unitsH = (height + maxColClues * 0.9) / zoomLevel;
+
+  // Active crosshair highlight: prioritize hover, fall back to selected cell
+  const activeFocus = hover !== null ? hover : selectedCell;
+  const activeRow = activeFocus !== null ? Math.floor(activeFocus / width) : -1;
+  const activeCol = activeFocus !== null ? activeFocus % width : -1;
 
   const cellAt = (e: React.PointerEvent): number | null => {
     const el = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null;
@@ -76,6 +143,7 @@ export function Board({ game, marks, probe, onProbe, tool, locked, showHighlight
     const cell = cellAt(e);
     if (cell === null) return;
     e.preventDefault();
+    setSelectedCell(cell);
     if (probe) {
       onProbe(cell);
       return;
@@ -107,6 +175,28 @@ export function Board({ game, marks, probe, onProbe, tool, locked, showHighlight
         <div className="board-meta">
           {width}×{height}
           {game.level ? ` · ${LEVEL_NAMES[game.level]}` : ''}
+          {width >= 15 && (
+            <span className="zoom-controls">
+              <button
+                type="button"
+                className={`zoom-btn${zoomLevel === 1 ? ' on' : ''}`}
+                onClick={() => setZoomLevel(1)}
+                title="Fit board"
+                aria-label="Fit board"
+              >
+                1×
+              </button>
+              <button
+                type="button"
+                className={`zoom-btn${zoomLevel === 1.4 ? ' on' : ''}`}
+                onClick={() => setZoomLevel(1.4)}
+                title="Zoom in 1.4x"
+                aria-label="Zoom in 1.4x"
+              >
+                1.4×
+              </button>
+            </span>
+          )}
         </div>
       </div>
       <div
@@ -117,7 +207,9 @@ export function Board({ game, marks, probe, onProbe, tool, locked, showHighlight
           className="board-grid"
           style={{ gridTemplateColumns: `auto repeat(${width}, var(--cell))` }}
           role="grid"
-          aria-label={`${game.title}, ${width} by ${height} nonogram`}
+          tabIndex={0}
+          aria-label={`${game.title}, ${width} by ${height} nonogram grid. Use arrow keys to navigate, Space or Enter to paint.`}
+          onKeyDown={handleKeyDown}
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
           onPointerUp={endStroke}
@@ -129,7 +221,7 @@ export function Board({ game, marks, probe, onProbe, tool, locked, showHighlight
           {game.colClues.map((clues, c) => (
             <div
               key={c}
-              className={`clue col${done.cols[c] ? ' done' : ''}${showHighlights && hoverCol === c ? ' hl' : ''}${guide(c, width) ? ' guide-r' : ''}`}
+              className={`clue col${done.cols[c] ? ' done' : ''}${showHighlights && activeCol === c ? ' hl' : ''}${guide(c, width) ? ' guide-r' : ''}`}
             >
               {clues.map((n, i) => (
                 <span key={i}>{n}</span>
@@ -146,8 +238,9 @@ export function Board({ game, marks, probe, onProbe, tool, locked, showHighlight
               guideBottom={guide(r, height) === 1}
               cells={game.cells}
               marks={marks}
-              hoverRow={showHighlights ? hoverRow : -1}
-              hoverCol={showHighlights ? hoverCol : -1}
+              hoverRow={showHighlights ? activeRow : -1}
+              hoverCol={showHighlights ? activeCol : -1}
+              selectedCell={selectedCell}
             />
           ))}
         </div>
@@ -172,10 +265,22 @@ interface RowProps {
   marks: CellMarks | null;
   hoverRow: number;
   hoverCol: number;
+  selectedCell: number;
 }
 
 /** One row (clue + cells). Re-renders only when its own cells or highlight change. */
-const RowCells = memo(function RowCells({ r, width, clues, rowDone, guideBottom, cells, marks, hoverRow, hoverCol }: RowProps) {
+const RowCells = memo(function RowCells({
+  r,
+  width,
+  clues,
+  rowDone,
+  guideBottom,
+  cells,
+  marks,
+  hoverRow,
+  hoverCol,
+  selectedCell,
+}: RowProps) {
   const rowHl = hoverRow === r;
   return (
     <>
@@ -187,18 +292,21 @@ const RowCells = memo(function RowCells({ r, width, clues, rowDone, guideBottom,
       {Array.from({ length: width }, (_, c) => {
         const idx = r * width + c;
         const state = cells[idx];
+        const isSelected = selectedCell === idx;
         const cls = [
           'cell',
           state === 1 ? 'filled' : state === -1 ? 'crossed' : '',
           rowHl || hoverCol === c ? 'hl' : '',
           c % GUIDE_EVERY === GUIDE_EVERY - 1 && c < width - 1 ? 'guide-r' : '',
           guideBottom ? 'guide-b' : '',
+          isSelected ? 'focused' : '',
           marks?.[idx] ?? '',
         ];
         return (
           <div
             key={c}
             role="gridcell"
+            tabIndex={isSelected ? 0 : -1}
             data-cell={idx}
             className={cls.filter(Boolean).join(' ')}
             aria-label={`row ${r + 1} column ${c + 1}: ${state === 1 ? 'filled' : state === -1 ? 'crossed out' : 'empty'}`}
@@ -214,6 +322,9 @@ function rowPropsEqual(a: RowProps, b: RowProps): boolean {
   if (a.clues !== b.clues || a.marks !== b.marks) return false;
   const rowHlChanged = (a.hoverRow === a.r) !== (b.hoverRow === b.r);
   if (rowHlChanged || a.hoverCol !== b.hoverCol) return false;
+  const selChanged = (Math.floor(a.selectedCell / a.width) === a.r) !== (Math.floor(b.selectedCell / b.width) === b.r) ||
+                     (a.selectedCell === a.r * a.width + (a.selectedCell % a.width)) !== (b.selectedCell === b.r * b.width + (b.selectedCell % b.width));
+  if (selChanged && (Math.floor(a.selectedCell / a.width) === a.r || Math.floor(b.selectedCell / b.width) === b.r)) return false;
   const start = a.r * a.width;
   for (let i = start; i < start + a.width; i++) if (a.cells[i] !== b.cells[i]) return false;
   return true;

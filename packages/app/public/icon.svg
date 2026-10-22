@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="96" fill="#0b1220"/>
+  <!-- Clue Header Area Hints -->
+  <rect x="76" y="76" width="360" height="360" rx="16" fill="#162033" stroke="#26364f" stroke-width="6"/>
+  <!-- Nonogram 5x5 Grid representation with 5-cell bold accent -->
+  <!-- Row 1: 0 1 1 1 0 -->
+  <rect x="156" y="104" width="60" height="60" rx="6" fill="#3dc6f2"/>
+  <rect x="226" y="104" width="60" height="60" rx="6" fill="#3dc6f2"/>
+  <rect x="296" y="104" width="60" height="60" rx="6" fill="#3dc6f2"/>
+
+  <!-- Row 2: 1 1 0 1 1 -->
+  <rect x="86" y="174" width="60" height="60" rx="6" fill="#3dc6f2"/>
+  <rect x="156" y="174" width="60" height="60" rx="6" fill="#3dc6f2"/>
+  <rect x="226" y="174" width="60" height="60" rx="6" fill="#1c2940"/>
+  <!-- subtle cross in (2, 2) -->
+  <path d="M246 194 L266 214 M266 194 L246 214" stroke="#7a8aa5" stroke-width="4" stroke-linecap="round"/>
+  <rect x="296" y="174" width="60" height="60" rx="6" fill="#3dc6f2"/>
+  <rect x="366" y="174" width="60" height="60" rx="6" fill="#3dc6f2"/>
+
+  <!-- Row 3: 1 1 1 1 1 (Full line) -->
+  <rect x="86" y="244" width="60" height="60" rx="6" fill="#3dc6f2"/>
+  <rect x="156" y="244" width="60" height="60" rx="6" fill="#3dc6f2"/>
+  <rect x="226" y="244" width="60" height="60" rx="6" fill="#3dc6f2"/>
+  <rect x="296" y="244" width="60" height="60" rx="6" fill="#3dc6f2"/>
+  <rect x="366" y="244" width="60" height="60" rx="6" fill="#3dc6f2"/>
+
+  <!-- Row 4: 0 1 1 1 0 -->
+  <rect x="156" y="314" width="60" height="60" rx="6" fill="#3dc6f2"/>
+  <rect x="226" y="314" width="60" height="60" rx="6" fill="#3dc6f2"/>
+  <rect x="296" y="314" width="60" height="60" rx="6" fill="#3dc6f2"/>
+
+  <!-- Row 5: 0 0 1 0 0 -->
+  <rect x="226" y="384" width="60" height="60" rx="6" fill="#3dc6f2"/>
+</svg>
