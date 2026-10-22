@@ -66,8 +66,12 @@ export default function App() {
     try {
       const client = solver();
       const level = settingsRef.current.preferredDifficulty ?? undefined;
-      const def = await client.generate({ size, seed: Date.now(), maxAttempts: 200, level });
-      const analysis = await client.solve(def);
+      const def = await client.generate({ size, seed: Date.now(), maxAttempts: 600, maxTimeMs: 5000, level });
+      // The generator rates every board it accepts, so skip a duplicate full solve.
+      const analysis =
+        def.level !== undefined
+          ? { solved: true, level: def.level, score: def.score ?? 0 }
+          : await client.solve(def);
       const game: StoredGame = {
         id: String(Date.now()),
         title: def.title ?? `Puzzle ${size}×${size}`,

@@ -2,7 +2,7 @@
  * Nonogram Revisited. GPL-3.0-or-later; see LICENSE.
  * Board model, coordinate formatting, clue extraction, and text/URL serialization.
  */
-import type { CellState, LineAxis, LineRef, PuzzleDefinition, StepMarks } from './types';
+import type { CellState, DifficultyLevel, LineAxis, LineRef, PuzzleDefinition, StepMarks } from './types';
 
 export function emptyMarks(): StepMarks {
   return { key: [], place: [], elim: [], fins: [], tint: [], chains: [], clues: [] };
@@ -84,6 +84,8 @@ export class NonogramBoard {
   readonly cells: CellState[];
   readonly solution?: (0 | 1)[];
   readonly title?: string;
+  readonly level?: DifficultyLevel;
+  readonly score?: number;
 
   constructor(def: {
     width: number;
@@ -93,6 +95,8 @@ export class NonogramBoard {
     cells?: readonly CellState[];
     solution?: readonly (0 | 1)[];
     title?: string;
+    level?: DifficultyLevel;
+    score?: number;
   }) {
     if (def.width < 1 || def.height < 1) {
       throw new Error(`Invalid board dimensions: ${def.width}x${def.height}`);
@@ -113,6 +117,8 @@ export class NonogramBoard {
       this.solution = [...def.solution];
     }
     this.title = def.title;
+    this.level = def.level;
+    this.score = def.score;
   }
 
   static fromBitmap(
@@ -155,6 +161,8 @@ export class NonogramBoard {
       cells: this.cells,
       solution: this.solution,
       title: this.title,
+      level: this.level,
+      score: this.score,
     });
   }
 
@@ -251,6 +259,8 @@ export class NonogramBoard {
       colClues: this.colClues.map((c) => [...c]),
       solution: this.solution ? [...this.solution] : undefined,
       title: this.title,
+      level: this.level,
+      score: this.score,
     };
   }
 }
@@ -331,6 +341,8 @@ export function parseNonogramText(raw: string): NonogramBoard | null {
           colClues: obj.colClues,
           solution: obj.solution,
           title: obj.title,
+          level: obj.level,
+          score: obj.score,
         });
       }
     } catch {
