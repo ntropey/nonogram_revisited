@@ -220,6 +220,9 @@ export async function build() {
     await copyDir(APP_DIST, join(DIST, 'play'));
   }
 
+  // ads.txt for Google AdSense authorization
+  await writeFile(join(DIST, 'ads.txt'), 'google.com, pub-6409516653999633, DIRECT, f08c47fec0942fa0\n');
+
   // sitemap.xml + robots.txt when SITE_URL is configured.
   if (SITE_URL) {
     const base = SITE_URL.endsWith('/') ? SITE_URL : SITE_URL + '/';

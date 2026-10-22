@@ -34,6 +34,7 @@ describe('website build', () => {
     expect(names).toContain('privacy/index.html');
     expect(names).toContain('robots.txt');
     expect(names).toContain('sitemap.xml');
+    expect(names).toContain('ads.txt');
   });
 
   it('copies the app build to /play/', async () => {
