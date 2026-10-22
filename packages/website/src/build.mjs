@@ -120,9 +120,10 @@ ${description ? `<meta name="description" content="${description.replace(/"/g, '
 <footer>
   <p style="font-size:.75rem;margin-top:8px">
     More tools:
-    <a href="https://ntropey.github.io/hodoku_revisited" target="_blank" rel="noopener noreferrer">Hodoku Revisited</a> ·
-    <a href="https://ntropey.github.io/kakuro_revisited" target="_blank" rel="noopener noreferrer">Kakuro Revisited</a> ·
-    <a href="https://ntropey.github.io/nonogram_revisited" target="_blank" rel="noopener noreferrer">Nonogram Revisited</a>
+    <a href="https://hodokurevisited.com/" target="_blank" rel="noopener noreferrer">Hodoku Revisited</a> ·
+    <a href="https://kakurorevisited.com/" target="_blank" rel="noopener noreferrer">Kakuro Revisited</a> ·
+    <a href="https://nonogramrevisited.com/" target="_blank" rel="noopener noreferrer">Nonogram Revisited</a> ·
+    <a href="https://logisimrevisited.com/" target="_blank" rel="noopener noreferrer">Logisim Revisited</a>
   </p>
 </footer>
 <script type="module">${GATE_MJS}</script>
