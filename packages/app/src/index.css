@@ -18,7 +18,7 @@
   --cell: #1a2740;
   --cell-line: #26364f;
   --guide: #4a6286;
-  --hl: rgba(61, 198, 242, 0.1);
+  --hl: rgba(61, 198, 242, 0.14);
   --cross: #7a8aa5;
   --border: #26364f;
   --good: #4ade80;
@@ -42,9 +42,9 @@
   --filled-2: #0a5a8a;
   --cell: #f7f9fd;
   --cell-line: #d5dcea;
-  --guide: #7d8db0;
-  --hl: rgba(10, 132, 198, 0.1);
-  --cross: #94a0b8;
+  --guide: #5d7099;
+  --hl: rgba(10, 132, 198, 0.14);
+  --cross: #8391ab;
   --border: #d5dcea;
   --good: #16a34a;
   --danger: #dc2626;
@@ -82,12 +82,13 @@ button, input, select { font: inherit; color: inherit; }
   border: 1px solid var(--border); background: var(--surface-2); color: var(--text);
   padding: 0.42rem 0.85rem; border-radius: 8px; cursor: pointer; font-size: 0.88rem; line-height: 1.2;
   transition: background 0.12s, border-color 0.12s, transform 0.06s;
+  min-height: 38px; display: inline-flex; align-items: center; justify-content: center;
 }
 .btn:hover:not(:disabled) { border-color: var(--accent); }
 .btn:active:not(:disabled) { transform: translateY(1px); }
 .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
 .btn.primary:hover:not(:disabled) { filter: brightness(1.08); }
-.btn.icon { font-size: 1.1rem; padding: 0.25rem 0.55rem; }
+.btn.icon { font-size: 1.1rem; padding: 0.25rem 0.55rem; width: 38px; height: 38px; }
 .btn.ghost { background: transparent; border-color: transparent; padding: 0.1rem 0.45rem; font-size: 1.1rem; }
 .btn:disabled { opacity: 0.45; cursor: not-allowed; }
 
@@ -121,12 +122,15 @@ button, input, select { font: inherit; color: inherit; }
 .toolpad-group { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
 .toolpad-group label { display: flex; align-items: center; gap: 0.4rem; font-size: 0.78rem; color: var(--muted); }
 .toolpad-group input[type='number'], .toolpad-group select {
-  background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 0.35rem 0.5rem; color: var(--text);
+  background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 0.35rem 0.5rem; color: var(--text); min-height: 38px;
 }
-.toolpad-group input[type='number'] { width: 4rem; }
+.toolpad-group input[type='number'] { width: 4.2rem; }
 
 .segmented { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: var(--surface-2); }
-.segmented button { border: 0; background: transparent; padding: 0.42rem 0.8rem; cursor: pointer; display: flex; align-items: center; gap: 0.4rem; font-size: 0.88rem; }
+.segmented button {
+  border: 0; background: transparent; padding: 0.42rem 0.8rem; cursor: pointer; display: flex; align-items: center; gap: 0.4rem; font-size: 0.88rem;
+  min-height: 38px;
+}
 .segmented button.on { background: var(--accent-soft); color: var(--accent); font-weight: 600; box-shadow: inset 0 -2px 0 var(--accent); }
 .swatch { width: 0.9rem; height: 0.9rem; border-radius: 3px; display: inline-grid; place-items: center; font-size: 0.85rem; line-height: 1; }
 .swatch.fill { background: var(--filled); }
@@ -148,7 +152,11 @@ button, input, select { font: inherit; color: inherit; }
 }
 .board-head { text-align: center; }
 .board-title { margin: 0; font-size: 1.15rem; letter-spacing: 0.01em; }
-.board-meta { color: var(--muted); font-size: 0.8rem; margin-top: 0.15rem; }
+.board-meta { color: var(--muted); font-size: 0.8rem; margin-top: 0.15rem; display: flex; align-items: center; justify-content: center; gap: 0.6rem; }
+
+.zoom-controls { display: inline-flex; gap: 2px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 6px; padding: 2px; }
+.zoom-btn { border: 0; background: transparent; color: var(--muted); padding: 2px 6px; font-size: 0.72rem; border-radius: 4px; cursor: pointer; font-weight: 600; }
+.zoom-btn.on { background: var(--accent); color: var(--accent-ink); }
 
 .board {
   --cell: clamp(14px, min(calc(var(--avail-w) / var(--units-w)), calc(var(--avail-h) / var(--units-h))), 52px);
@@ -157,7 +165,7 @@ button, input, select { font: inherit; color: inherit; }
   border-radius: 14px; padding: 0.9rem; box-shadow: var(--shadow);
   max-width: 100%; overflow: auto;
 }
-.board-grid { display: grid; width: max-content; touch-action: none; user-select: none; -webkit-user-select: none; }
+.board-grid { display: grid; width: max-content; touch-action: none; user-select: none; -webkit-user-select: none; outline: none; }
 .board.locked .board-grid { cursor: default; }
 
 .clue { display: flex; font-weight: 600; color: var(--text); font-size: max(9px, calc(var(--cell) * 0.46)); font-variant-numeric: tabular-nums; }
@@ -166,14 +174,16 @@ button, input, select { font: inherit; color: inherit; }
 .clue.col span { height: var(--clue); }
 .clue.row { flex-direction: row; justify-content: flex-end; align-items: center; padding-right: 6px; gap: 0; }
 .clue.row span { min-width: var(--clue); padding: 0 0.1em; }
-.clue.done { color: var(--muted); opacity: 0.45; }
-.clue.hl { background: var(--hl); border-radius: 4px; }
+.clue.done { color: var(--muted); opacity: 0.38; }
+.clue.hl { background: var(--hl); border-radius: 4px; color: var(--accent); }
 
 .cell {
   width: var(--cell); height: var(--cell); background: var(--cell);
   box-shadow: inset 0 0 0 1px var(--cell-line); position: relative; cursor: pointer;
+  outline: none;
 }
 .cell.hl { background: color-mix(in srgb, var(--cell) 80%, var(--accent)); }
+.cell.focused { outline: 2px solid var(--accent); outline-offset: -2px; z-index: 2; }
 .cell.filled { background: var(--filled); box-shadow: inset 0 0 0 1px var(--filled-2), inset 0 0 0 3px color-mix(in srgb, var(--filled) 80%, #fff); }
 .cell.crossed::after {
   content: ''; position: absolute; inset: 28%; background:
@@ -203,6 +213,26 @@ button, input, select { font: inherit; color: inherit; }
 .empty-art { display: inline-grid; grid-template-columns: repeat(5, 18px); gap: 3px; }
 .empty-art span { width: 18px; height: 18px; border-radius: 3px; background: var(--cell); box-shadow: inset 0 0 0 1px var(--cell-line); }
 .empty-art span.on { background: var(--filled); box-shadow: none; }
+
+/* ---------- Modal ---------- */
+.modal-backdrop {
+  position: fixed; inset: 0; z-index: 100; display: flex; align-items: center; justify-content: center;
+  background: rgba(4, 8, 16, 0.7); backdrop-filter: blur(4px); padding: 1rem;
+}
+.modal-card {
+  width: 100%; max-width: 380px; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 16px; padding: 1.5rem; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 1rem;
+  animation: modalIn 0.18s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes modalIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+.modal-header { display: flex; align-items: center; justify-content: space-between; }
+.solved-badge { font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--good); }
+.solved-title { margin: 0; font-size: 1.3rem; letter-spacing: 0.01em; }
+.solved-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; text-align: center; }
+.stat-box { background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 0.6rem 0.3rem; display: flex; flex-direction: column; gap: 0.2rem; }
+.stat-label { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+.stat-value { font-size: 0.95rem; font-weight: 700; color: var(--text); }
+.modal-actions { display: flex; justify-content: flex-end; gap: 0.6rem; margin-top: 0.4rem; }
 
 /* ---------- Hints ---------- */
 .hint-panel {
@@ -272,7 +302,10 @@ button, input, select { font: inherit; color: inherit; }
   .sidepanel { width: 100%; border-left: 0; border-top: 1px solid var(--border); max-height: 16rem; }
   .lib-del { opacity: 1; }
   .hint-panel { position: fixed; z-index: 8; left: 0.6rem; right: 0.6rem; bottom: 0.6rem; background: var(--surface); box-shadow: var(--shadow); max-height: 45vh; overflow: auto; }
-  .toolpad { padding: 0.55rem 0.7rem; }
+  .toolpad { padding: 0.65rem 0.8rem; gap: 0.6rem; }
+  .toolpad-group { width: 100%; justify-content: space-between; }
+  .toolpad-group.generator { justify-content: flex-start; }
+  .segmented button, .toolpad .btn { min-height: 44px; padding: 0.5rem 0.9rem; }
 }
 
 @media (prefers-reduced-motion: reduce) {
