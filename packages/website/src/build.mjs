@@ -27,7 +27,7 @@ const CONSENT_MJS = `(function(){
   el.className = 'consent';
   el.setAttribute('role', 'dialog');
   el.setAttribute('aria-label', 'Cookie consent');
-  el.innerHTML = '<p>Nonogram Revisited uses optional analytics. Allow cookies?</p><div><button type="button" data-consent="granted">Allow</button><button type="button" data-consent="declined">No thanks</button></div>';
+  el.innerHTML = '<p>Nonogram Revisited doesn’t use analytics or advertising cookies right now. If that changes, we’ll ask you first. Your answer is saved only in this browser.</p><div><button type="button" data-consent="granted">Allow</button><button type="button" data-consent="declined">No thanks</button></div>';
   el.addEventListener('click', function (e) {
     var choice = e.target && e.target.getAttribute && e.target.getAttribute('data-consent');
     if (!choice) return;
@@ -185,7 +185,7 @@ settings in localStorage.</p>
 <p>Nonogram Revisited stores settings and saved puzzles in your browser's local storage. Nothing you
 do in the app, such as the puzzles you play or your settings, is sent to a server. Your answer to
 the cookie banner is remembered in local storage too, so it only asks once.</p>
-<p>Ads load only after consent via the consent banner and Google Consent Mode v2 loader.</p>
+<p>The site doesn’t load advertising or analytics right now. If that changes, it will only do so after you consent through the banner.</p>
 `,
   },
 ];
