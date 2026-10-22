@@ -30,8 +30,9 @@ export const manualPage = {
 <p>Choose a <strong>Size</strong> (5 to 30) and optionally a <strong>Level</strong>, then press <strong>New
 puzzle</strong>. Every generated puzzle has exactly one solution and is rated Easy, Medium, Hard,
 Unfair or Extreme by the techniques needed to solve it. With Level set to Any you get whatever the
-generator finds first; a chosen Level is a preference, and a different level may come back if none
-turns up quickly.</p>
+generator finds first. A chosen Level is a preference: the generator screens candidates with fast
+line propagation and limits the hard-level search, so a different level may come back if the exact
+level does not turn up quickly.</p>
 <p>When your board matches every clue, the puzzle is marked <strong>Solved</strong>, the board locks,
 and the library shows a check mark. Undo reopens it.</p>
 

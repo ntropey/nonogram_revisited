@@ -24,6 +24,8 @@ describe('SolverClient round trip', () => {
     expect(def.height).toBe(5);
     expect(def.rowClues).toHaveLength(5);
     expect(def.colClues).toHaveLength(5);
+    expect(def.level).toBeGreaterThanOrEqual(1);
+    expect(def.score).toBeGreaterThan(0);
   });
 
   it('solves a generated puzzle and counts one solution', async () => {

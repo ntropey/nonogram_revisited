@@ -2,12 +2,14 @@ import { describe, expect, it } from 'vitest';
 import {
   NonogramBoard,
   analyzePuzzle,
+  checkUniqueness,
   countSolutions,
   dailyPuzzle,
   deserializePuzzle,
   generatePuzzle,
   getCompletedClues,
   isInteresting,
+  propagateLineDeductions,
   serializePuzzle,
   solveLineDP,
 } from '../src/index';
@@ -61,6 +63,24 @@ describe('solver and generator', () => {
     expect(countSolutions(a, 2)).toBe(1);
     expect(serializePuzzle(dailyPuzzle('2026-01-01', 5))).toBe(serializePuzzle(dailyPuzzle('2026-01-01', 5)));
   });
+  it('propagates forced line cells and detects a unique solution', () => {
+    const b = NonogramBoard.fromBitmap(5, 5, [
+      1, 1, 1, 1, 1,
+      1, 0, 0, 0, 1,
+      1, 0, 1, 0, 1,
+      1, 0, 0, 0, 1,
+      1, 1, 1, 1, 1,
+    ]);
+    const propagated = propagateLineDeductions(b);
+    expect(propagated.valid).toBe(true);
+    expect(checkUniqueness(b, 1000)).toBe('unique');
+  });
+  it('reports multiple solutions for an ambiguous board', () => {
+    const b = NonogramBoard.fromBitmap(2, 2, [1, 0, 0, 1]);
+    expect(countSolutions(b, 2)).toBe(2);
+    expect(checkUniqueness(b, 1000)).toBe('multiple');
+    expect(checkUniqueness(b, 0)).toBe('unknown');
+  });
 });
 
 describe('generator quality', () => {
@@ -84,5 +104,15 @@ describe('generator quality', () => {
     expect(isInteresting(new Array(25).fill(1), 5)).toBe(false);
     expect(isInteresting(new Array(25).fill(0), 5)).toBe(false);
     expect(isInteresting([1, 0, 1, 0, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 0, 1, 1, 0, 1, 1, 0, 1, 0, 1], 5)).toBe(true);
+  });
+
+  it('returns and carries a rated Extreme puzzle', () => {
+    const board = generatePuzzle({ size: 10, level: 5, seed: 1, maxAttempts: 200 });
+    expect(board.level).toBe(5);
+    expect(board.score).toBeGreaterThan(0);
+    expect(board.toDefinition().level).toBe(5);
+    expect(board.toDefinition().score).toBe(board.score);
+    expect(countSolutions(board.clone(), 2)).toBe(1);
+    expect(analyzePuzzle(board).solved).toBe(true);
   });
 });

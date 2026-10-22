@@ -41,28 +41,40 @@ export function analyzePuzzle(start: NonogramBoard, options?: StepFinderOptions)
   };
 }
 
-/** Count solutions up to `limit` by line-propagation plus backtracking (used for uniqueness of generated puzzles). */
+/** Propagate all forced line cells to a fixed point. Returns false if any line is contradictory. */
+function propagateLines(board: NonogramBoard): boolean {
+  for (let round = 0; round < 200; round++) {
+    let changed = false;
+    for (let axis = 0; axis < 2; axis++) {
+      const a = axis === 0 ? 'row' : 'col';
+      const n = axis === 0 ? board.height : board.width;
+      for (let i = 0; i < n; i++) {
+        const dp = solveLineDP(board.getClues(a, i), board.getLineCells(a, i));
+        if (!dp.valid) return false;
+        for (const ch of dp.newChanges) {
+          board.setLineCell(a, i, ch.pos, ch.state);
+          changed = true;
+        }
+      }
+    }
+    if (!changed) break;
+  }
+  return true;
+}
+
+/** Fast line-only propagation, used to screen generator candidates before human-style analysis. */
+export function propagateLineDeductions(start: NonogramBoard): { board: NonogramBoard; valid: boolean } {
+  const board = start.clone();
+  const valid = propagateLines(board);
+  return { board, valid };
+}
+
+/** Count solutions up to `limit` by line-propagation plus backtracking (used by tests and verification callers). */
 export function countSolutions(start: NonogramBoard, limit = 2): number {
   let found = 0;
   const search = (b: NonogramBoard): void => {
     if (found >= limit) return;
-    // propagate to a fixed point
-    for (let round = 0; round < 200; round++) {
-      let changed = false;
-      for (let axis = 0; axis < 2; axis++) {
-        const a = axis === 0 ? 'row' : 'col';
-        const n = axis === 0 ? b.height : b.width;
-        for (let i = 0; i < n; i++) {
-          const dp = solveLineDP(b.getClues(a, i), b.getLineCells(a, i));
-          if (!dp.valid) return;
-          for (const ch of dp.newChanges) {
-            b.setLineCell(a, i, ch.pos, ch.state);
-            changed = true;
-          }
-        }
-      }
-      if (!changed) break;
-    }
+    if (!propagateLines(b)) return;
     const idx = b.cells.indexOf(0);
     if (idx < 0) {
       if (b.isSolved()) found++;
@@ -77,4 +89,41 @@ export function countSolutions(start: NonogramBoard, limit = 2): number {
   };
   search(start.clone());
   return found;
+}
+
+export type UniquenessResult = 'unique' | 'multiple' | 'none' | 'unknown';
+
+/**
+ * Bounded uniqueness check. Returns `unknown` when the node budget runs out before
+ * the search proves or disproves a unique solution. Callers that need a hard guarantee
+ * should treat `unknown` as a rejection.
+ */
+export function checkUniqueness(start: NonogramBoard, maxNodes = 5000): UniquenessResult {
+  let found = 0;
+  let nodes = 0;
+  let exhausted = false;
+  const search = (b: NonogramBoard): void => {
+    if (found >= 2) return;
+    if (nodes >= maxNodes) {
+      exhausted = true;
+      return;
+    }
+    nodes++;
+    if (!propagateLines(b)) return;
+    const idx = b.cells.indexOf(0);
+    if (idx < 0) {
+      if (b.isSolved()) found++;
+      return;
+    }
+    for (const v of [1, -1] as const) {
+      const next = b.clone();
+      next.cells[idx] = v;
+      search(next);
+      if (found >= 2) return;
+    }
+  };
+  search(start.clone());
+  if (found >= 2) return 'multiple';
+  if (found === 1) return exhausted ? 'unknown' : 'unique';
+  return exhausted ? 'unknown' : 'none';
 }
