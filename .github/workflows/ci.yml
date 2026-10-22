@@ -21,7 +21,8 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
-      - run: pnpm test
+      # The website tests check the copied /play/ build, so the app must be built first.
       - run: pnpm --filter @nonogram/app build
+      - run: pnpm test
       - run: pnpm --filter @nonogram/website build
       - run: pnpm --filter @nonogram/website test
