@@ -2,7 +2,7 @@
  * Nonogram Revisited. GPL-3.0-or-later; see LICENSE.
  * Victory modal shown upon puzzle completion. Displays time, level, hints used, and shareable summary.
  */
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { LEVEL_NAMES } from '@nonogram/core';
 import type { StoredGame } from '../types';
 
@@ -14,6 +14,12 @@ interface SolvedModalProps {
 
 export function SolvedModal({ game, onNew, onClose }: SolvedModalProps) {
   const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
 
   const durationSec = game.solvedAt ? Math.max(1, Math.round((game.solvedAt - game.createdAt) / 1000)) : 0;
   const mins = Math.floor(durationSec / 60);
