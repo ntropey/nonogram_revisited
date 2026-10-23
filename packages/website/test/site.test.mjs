@@ -94,6 +94,18 @@ describe('shell', () => {
     for (const f of pages) expect(await readFile(f, 'utf8'), relative(DIST, f)).toContain('rel="icon"');
   });
 
+  it('gives every page a skip link, a main landmark and a labeled nav', async () => {
+    const pages = (await listFiles(DIST, ['play'])).filter((f) => f.endsWith('.html'));
+    for (const f of pages) {
+      const html = await readFile(f, 'utf8');
+      const name = relative(DIST, f);
+      expect(html, name).toContain('<a class="skip" href="#main">');
+      expect(html, name).toContain('<main id="main">');
+      expect(html, name).toContain('<nav class="nav" aria-label="Main">');
+      expect(html.match(/rel="apple-touch-icon"/g)?.length, name).toBe(1);
+    }
+  });
+
   it('remembers the consent choice instead of asking on every page', async () => {
     const html = await readFile(join(DIST, 'index.html'), 'utf8');
     expect(html).toContain("localStorage.setItem(KEY, choice)");

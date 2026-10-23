@@ -63,7 +63,9 @@ ul { margin: 0.75rem 0 0.75rem 1.5rem; color: #e2e8f0; }
 li { margin: 0.35rem 0; }
 .nav { display: flex; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1.5rem; }
 .nav a { white-space: nowrap; color: #cbd5e1; text-decoration: none; border: 1px solid #334155; padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.9rem; }
-.nav a:hover { border-color: #38bdf8; color: #38bdf8; }
+.nav a:hover, .nav a[aria-current] { border-color: #38bdf8; color: #38bdf8; }
+.skip { position: absolute; left: -9999px; top: 0.5rem; padding: 0.5rem 0.9rem; border-radius: 6px; background: #1e293b; color: #f8fafc; z-index: 10000; }
+.skip:focus { left: 0.5rem; }
 .play-link { display: inline-block; margin-top: 1rem; background: #38bdf8; color: #022c35; padding: 0.6rem 1rem; border-radius: 6px; text-decoration: none; font-weight: 600; }
 .play-link:hover { background: #7dd3fc; }
 .tech { border: 1px solid #334155; border-radius: 8px; padding: 1rem; margin: 1rem 0; background: #1e293b; }
@@ -100,25 +102,25 @@ function shell({ title, body, active, description }) {
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="icon" href="/icon.svg" type="image/svg+xml" />
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 <title>${title} — Nonogram Revisited</title>
 ${description ? `<meta name="description" content="${description.replace(/"/g, '&quot;')}" />\n` : ''}
 <style>${CSS}</style>
 </head>
 <body>
+<a class="skip" href="#main">Skip to content</a>
 <header>
   <a href="/" style="font-weight:700;color:#38bdf8;text-decoration:none">Nonogram Revisited</a>
-  <nav class="nav">
-    <a href="/" ${active === 'home' ? 'style="border-color:#38bdf8;color:#38bdf8"' : ''}>Home</a>
-    <a href="/techniques/" ${active === 'techniques' ? 'style="border-color:#38bdf8;color:#38bdf8"' : ''}>Techniques</a>
-    <a href="/learn/" ${active === 'learn' ? 'style="border-color:#38bdf8;color:#38bdf8"' : ''}>Learn</a>
-    <a href="/manual/" ${active === 'manual' ? 'style="border-color:#38bdf8;color:#38bdf8"' : ''}>Manual</a>
-    <a href="/about/" ${active === 'about' ? 'style="border-color:#38bdf8;color:#38bdf8"' : ''}>About</a>
-    <a href="/privacy/" ${active === 'privacy' ? 'style="border-color:#38bdf8;color:#38bdf8"' : ''}>Privacy</a>
+  <nav class="nav" aria-label="Main">
+    <a href="/" ${active === 'home' ? 'aria-current="page"' : ''}>Home</a>
+    <a href="/techniques/" ${active === 'techniques' ? 'aria-current="page"' : ''}>Techniques</a>
+    <a href="/learn/" ${active === 'learn' ? 'aria-current="page"' : ''}>Learn</a>
+    <a href="/manual/" ${active === 'manual' ? 'aria-current="page"' : ''}>Manual</a>
+    <a href="/about/" ${active === 'about' ? 'aria-current="page"' : ''}>About</a>
+    <a href="/privacy/" ${active === 'privacy' ? 'aria-current="page"' : ''}>Privacy</a>
     <a class="play-link" href="/play/">Play</a>
   </nav>
 </header>
-<main>${body}</main>
+<main id="main">${body}</main>
 <footer>
   <p style="font-size:.75rem;margin-top:8px">
     More tools:
