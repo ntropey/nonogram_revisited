@@ -1,7 +1,7 @@
 # Port plan: status and roadmap
 
 Where Nonogram Revisited stands, what is verified, and what comes next. Update this file when a
-milestone lands. Last reviewed: 2026-10-22.
+milestone lands. Last reviewed: 2026-10-26.
 
 ## Status
 
@@ -14,11 +14,11 @@ milestone lands. Last reviewed: 2026-10-22.
 | Prover ("Why?") | Done | Fill and cross-out hypotheses traced with core's `traceHypothesis`; chain and conflict line shown, one-click apply. |
 | Themes and layout | Done | Dark and light, responsive. |
 | Website | Done | Home, nine technique pages with verified diagrams, Learn (3 pages), manual, about, privacy. |
-| PWA shell | Partial | Service worker works (it did not evaluate before; fixed). The manifest has no icons yet, so the app is not installable on most platforms. |
+| PWA shell | Done | Service worker works. `manifest.json` declares `start_url`, scope, 192/512/maskable icons and an SVG icon. |
 | Modes (play / train / analyze) | Not started | `gameMode` is stored but unused. |
 | Daily puzzle | Not started | `dailyPuzzle` exists in core; no UI. |
 | Share by URL | Not started | `serializePuzzle` / `deserializePuzzle` exist in core; no UI. |
-| Keyboard play | Not started | Cells are not focusable; only tool shortcuts exist. |
+| Keyboard play | Done | The grid uses a roving tab stop; arrow keys move focus, Space/Enter paints, and each cell has an `aria-label`. |
 | UI tests | Not started | Logic and worker are unit tested; the UI was checked by hand with a browser. |
 
 ## How things are verified
@@ -31,12 +31,11 @@ milestone lands. Last reviewed: 2026-10-22.
 
 ## Roadmap
 
-1. **Installable PWA:** icons (192 and 512 px, plus maskable), `start_url` and scope checks, an offline smoke test.
-2. **Keyboard and screen-reader play:** roving focus on cells, arrow keys, Space/Enter to paint, a live region for Coach text.
-3. **Modes:** Play (no hints), Train (Coach on, techniques selectable via the step finder's `disabledTechniques`), Analyze (paste or load clues and see the full step list and rating).
-4. **Daily puzzle and sharing:** use `dailyPuzzle` and the core serializer; keep stored keys stable.
-5. **Generator quality:** pixel-art puzzles with titles. The target-difficulty search now screens with line propagation, bounds the hard-level search, and falls back to the closest rated board.
-6. **UI tests:** a few browser tests for painting, undo, Coach and Why?.
+1. **Modes:** Play (no hints), Train (Coach on, techniques selectable via the step finder's `disabledTechniques`), Analyze (paste or load clues and see the full step list and rating).
+2. **Daily puzzle and sharing:** use `dailyPuzzle` and the core serializer; keep stored keys stable.
+3. **Generator quality:** pixel-art puzzles with titles. The target-difficulty search now screens with line propagation, bounds the hard-level search, and falls back to the closest rated board.
+4. **UI tests:** a few browser tests for painting, undo, Coach and Why?.
+5. **Installable PWA smoke test:** verify install prompts and an offline reload in a browser.
 
 ## Constraints to keep
 

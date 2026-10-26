@@ -113,6 +113,67 @@ describe('shell', () => {
   });
 });
 
+describe('seo metadata', () => {
+  const BASE = (process.env.SITE_URL || 'https://nonogramrevisited.com').replace(/\/*$/, '/');
+  const marketingPages = async () =>
+    (await listFiles(DIST, ['play'])).filter((f) => f.endsWith('.html'));
+
+  it('gives every marketing page one canonical link, a description, an og:image and JSON-LD', async () => {
+    for (const f of await marketingPages()) {
+      const html = await readFile(f, 'utf8');
+      const name = relative(DIST, f).replace(/\\/g, '/');
+      expect(html.match(/rel="canonical"/g)?.length, name).toBe(1);
+      expect(html, name).toMatch(/<meta name="description" content="[^"]+"/);
+      expect(html, name).toMatch(/<meta property="og:image" content="[^"]+"/);
+      expect(html.match(/<script type="application\/ld\+json">/g)?.length, name).toBe(1);
+    }
+  });
+
+  it('builds absolute canonicals: root for home, trailing slash for directories', async () => {
+    const home = await readFile(join(DIST, 'index.html'), 'utf8');
+    expect(home).toContain(`<link rel="canonical" href="${BASE}" />`);
+    const about = await readFile(join(DIST, 'about', 'index.html'), 'utf8');
+    expect(about).toContain(`<link rel="canonical" href="${BASE}about/" />`);
+    const technique = await readFile(join(DIST, 'techniques', TECHNIQUES[0].slug, 'index.html'), 'utf8');
+    expect(technique).toContain(`<link rel="canonical" href="${BASE}techniques/${TECHNIQUES[0].slug}/" />`);
+  });
+
+  it('does not repeat the site name in the home title', async () => {
+    const html = await readFile(join(DIST, 'index.html'), 'utf8');
+    const title = html.match(/<title>([^<]*)<\/title>/)?.[1] ?? '';
+    expect(title).toContain('Nonogram Solver &amp; Trainer');
+    expect(title.match(/Nonogram Revisited/g)?.length ?? 0).toBe(1);
+    expect(html).not.toContain('Nonogram Revisited — Nonogram Revisited');
+  });
+
+  it('uses the expected descriptions for home, about and privacy', async () => {
+    const expected = {
+      'index.html':
+        'Free Nonogram (Picross) solver with step-by-step hints, a four-stage coach, contradiction proofs, a seeded generator, and offline play.',
+      'about/index.html':
+        'Why Nonogram Revisited exists, how the deterministic solver works, and the open-source projects behind it.',
+      'privacy/index.html':
+        'What Nonogram Revisited stores in your browser, what it never sends, and how cookie consent works.',
+    };
+    for (const [page, description] of Object.entries(expected)) {
+      const html = await readFile(join(DIST, page), 'utf8');
+      expect(html, page).toContain(`<meta name="description" content="${description}" />`);
+      expect(html, page).toContain(`<meta property="og:description" content="${description}" />`);
+    }
+  });
+
+  it('embeds Organization, WebSite and WebPage JSON-LD nodes', async () => {
+    const html = await readFile(join(DIST, 'about', 'index.html'), 'utf8');
+    const json = html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/)?.[1] ?? '';
+    const data = JSON.parse(json);
+    expect(data['@context']).toBe('https://schema.org');
+    expect(data['@graph'].map((node) => node['@type'])).toEqual(['Organization', 'WebSite', 'WebPage']);
+    const page = data['@graph'][2];
+    expect(page.url).toBe(`${BASE}about/`);
+    expect(page.name).toBe('About — Nonogram Revisited');
+  });
+});
+
 describe('site integrity', () => {
   it('has no broken internal links or anchors', async () => {
     const pages = (await listFiles(DIST, ['play'])).filter((f) => f.endsWith('.html'));
