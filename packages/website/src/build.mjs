@@ -14,7 +14,7 @@ const SRC_DIR = resolve(import.meta.dirname, '..'); // packages/website
 const ROOT = resolve(SRC_DIR, '..', '..'); // workspace root
 const DIST = join(SRC_DIR, 'dist');
 const APP_DIST = join(ROOT, 'packages', 'app', 'dist');
-const SITE_URL = process.env.SITE_URL || 'https://nonogramrevisited.com/';
+const SITE_URL = (process.env.SITE_URL || 'https://nonogramrevisited.com').replace(/\/*$/, '/');
 
 /** Inlined consent banner + Google Consent Mode v2 loader (on every site page). */
 const CONSENT_MJS = `(function(){
@@ -93,8 +93,58 @@ code { background: #1e293b; padding: 0.05rem 0.35rem; border-radius: 4px; }
 @media (max-width: 640px) { header { flex-direction: column; align-items: flex-start; } }
 `;
 
+/** Escape text for an HTML attribute or element body. */
+function escapeHtml(value) {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+/** Absolute canonical URL for a page path written to dist. */
+function canonicalUrl(path) {
+  if (path === 'index.html') return SITE_URL;
+  if (path.endsWith('/index.html')) return SITE_URL + path.slice(0, -'index.html'.length);
+  return SITE_URL + path.replace(/^\//, '');
+}
+
+const DEFAULT_DESCRIPTION =
+  'Free Nonogram (Picross) solver, generator, trainer and analyzer with a deterministic human-step engine.';
+
 /** Shared page shell. */
-function shell({ title, body, active, description }) {
+function shell({ path, title, body, active, description }) {
+  const fullTitle = `${title} — Nonogram Revisited`;
+  const canonical = canonicalUrl(path);
+  const desc = description || DEFAULT_DESCRIPTION;
+  const ogImage = `${SITE_URL}icon-512.png`;
+  const jsonLd = JSON.stringify({
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'Organization',
+        '@id': `${SITE_URL}#organization`,
+        name: 'Nonogram Revisited',
+        url: SITE_URL,
+        logo: `${SITE_URL}icon-512.png`,
+      },
+      {
+        '@type': 'WebSite',
+        '@id': `${SITE_URL}#website`,
+        name: 'Nonogram Revisited',
+        url: SITE_URL,
+        publisher: { '@id': `${SITE_URL}#organization` },
+      },
+      {
+        '@type': 'WebPage',
+        '@id': `${canonical}#webpage`,
+        name: fullTitle,
+        description: desc,
+        url: canonical,
+        isPartOf: { '@id': `${SITE_URL}#website` },
+      },
+    ],
+  }).replace(/</g, '\\u003c');
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -102,8 +152,23 @@ function shell({ title, body, active, description }) {
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="icon" href="/icon.svg" type="image/svg+xml" />
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-<title>${title} — Nonogram Revisited</title>
-${description ? `<meta name="description" content="${description.replace(/"/g, '&quot;')}" />\n` : ''}
+<title>${escapeHtml(fullTitle)}</title>
+<meta name="description" content="${escapeHtml(desc)}" />
+<link rel="canonical" href="${escapeHtml(canonical)}" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Nonogram Revisited" />
+<meta property="og:title" content="${escapeHtml(fullTitle)}" />
+<meta property="og:description" content="${escapeHtml(desc)}" />
+<meta property="og:url" content="${escapeHtml(canonical)}" />
+<meta property="og:image" content="${escapeHtml(ogImage)}" />
+<meta property="og:image:width" content="512" />
+<meta property="og:image:height" content="512" />
+<meta property="og:image:alt" content="Nonogram Revisited app icon" />
+<meta name="twitter:card" content="summary" />
+<meta name="twitter:title" content="${escapeHtml(fullTitle)}" />
+<meta name="twitter:description" content="${escapeHtml(desc)}" />
+<meta name="twitter:image" content="${escapeHtml(ogImage)}" />
+<script type="application/ld+json">${jsonLd}</script>
 <style>${CSS}</style>
 </head>
 <body>
@@ -142,8 +207,9 @@ const pages = [
   manualPage,
   {
     path: 'index.html',
-    title: 'Nonogram Revisited',
+    title: 'Nonogram Solver & Trainer',
     active: 'home',
+    description: 'Free Nonogram (Picross) solver with step-by-step hints, a four-stage coach, contradiction proofs, a seeded generator, and offline play.',
     body: `
 <h1>Nonogram Revisited</h1>
 <p>A modern TypeScript Nonogram (Picross / Griddlers) solver, generator, trainer, and analyzer
@@ -169,6 +235,7 @@ settings in localStorage.</p>
     path: 'about/index.html',
     title: 'About',
     active: 'about',
+    description: 'Why Nonogram Revisited exists, how the deterministic solver works, and the open-source projects behind it.',
     body: `
 <h1>About</h1>
 <p>Nonogram Revisited is inspired by the classic open-source Java tools <strong>FreeNono</strong> and
@@ -185,6 +252,7 @@ settings in localStorage.</p>
     path: 'privacy/index.html',
     title: 'Privacy',
     active: 'privacy',
+    description: 'What Nonogram Revisited stores in your browser, what it never sends, and how cookie consent works.',
     body: `
 <h1>Privacy</h1>
 <p>Nonogram Revisited stores settings and saved puzzles in your browser's local storage. Nothing you

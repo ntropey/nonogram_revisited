@@ -3,15 +3,49 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="description" content="Nonogram Revisited — a modern Nonogram solver, generator, and trainer." />
-    <title>Nonogram Revisited</title>
+    <meta name="description" content="Nonogram Revisited — a modern Nonogram solver, generator, and trainer with step-by-step hints and an AI Coach." />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Nonogram Revisited" />
+    <meta property="og:title" content="Nonogram Solver &amp; Trainer — Nonogram Revisited" />
+    <meta property="og:description" content="Free Nonogram (Picross) solver with step-by-step hints, a four-stage coach, contradiction proofs, and offline play." />
+    <meta property="og:image" content="https://nonogramrevisited.com/icon-512.png" />
+    <meta property="og:image:width" content="512" />
+    <meta property="og:image:height" content="512" />
+    <meta property="og:url" content="https://nonogramrevisited.com/play/" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="Nonogram Solver &amp; Trainer — Nonogram Revisited" />
+    <meta name="twitter:description" content="Free Nonogram (Picross) solver with step-by-step hints, a four-stage coach, contradiction proofs, and offline play." />
+    <meta name="twitter:image" content="https://nonogramrevisited.com/icon-512.png" />
+    <link rel="canonical" href="https://nonogramrevisited.com/play/" />
+    <title>Nonogram Solver &amp; Trainer — Nonogram Revisited</title>
     <link rel="icon" href="/play/icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/play/apple-touch-icon.png" />
     <link rel="manifest" href="/play/manifest.json" />
     <meta name="theme-color" content="#0b1220" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "Nonogram Revisited",
+        "url": "https://nonogramrevisited.com/play/",
+        "applicationCategory": "GameApplication",
+        "operatingSystem": "Any",
+        "browserRequirements": "Requires JavaScript",
+        "isAccessibleForFree": true,
+        "description": "Free browser Nonogram (Picross) solver, generator, and trainer with step-by-step hints and a four-stage coach.",
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>
+    <noscript>
+      <main style="max-width:44rem;margin:10vh auto;padding:1.5rem;font-family:system-ui,sans-serif;line-height:1.6">
+        <h1>Nonogram Solver, Trainer &amp; AI Coach</h1>
+        <p>Nonogram Revisited is a free browser Nonogram (Picross) solver with step-by-step hints, a four-stage coach, contradiction proofs, a seeded generator, and offline play.</p>
+        <p><a href="../">Read the technique guides and manual</a> or <a href="../play/">open the solver</a>.</p>
+      </main>
+    </noscript>
     <script type="module" src="src/main.tsx"></script>
   </body>
 </html>
