@@ -19,6 +19,7 @@ export type WorkerMessage =
       payload: { definition: PuzzleDefinition; cells?: readonly CellState[]; disabledTechniques?: readonly TechniqueType[] };
     }
   | { type: 'GENERATE'; payload: { options: GenerateOptions } }
+  | { type: 'DAILY'; payload: { date: string; size?: number } }
   | { type: 'COUNT_SOLUTIONS'; payload: { definition: PuzzleDefinition; limit?: number } }
   | {
       type: 'TRACE';

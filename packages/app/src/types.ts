@@ -14,6 +14,12 @@ import type {
 
 export type GameMode = 'play' | 'train' | 'analyze';
 
+export interface DailyStats {
+  lastCompletedDate: string;
+  streak: number;
+  history: Record<string, { seconds: number; hintsUsed: number }>;
+}
+
 export interface AppSettings {
   /** Whether filled/cross marks are shown as highlights while solving */
   showHighlights: boolean;
@@ -27,6 +33,8 @@ export interface AppSettings {
   gameMode: GameMode;
   /** Board color scheme */
   theme: 'dark' | 'light';
+  /** Techniques disabled in Train mode */
+  disabledTechniques?: TechniqueType[];
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -36,6 +44,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   preferredDifficulty: null,
   gameMode: 'play',
   theme: 'dark',
+  disabledTechniques: [],
 };
 
 export interface StoredGame {

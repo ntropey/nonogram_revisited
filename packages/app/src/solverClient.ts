@@ -71,6 +71,10 @@ export class SolverClient {
     return this.request({ type: 'STEP', payload: { definition, cells, disabledTechniques } }, 'STEP_RESULT');
   }
 
+  daily(date: string, size?: number): Promise<PuzzleDefinition> {
+    return this.request({ type: 'DAILY', payload: { date, size } }, 'GENERATE_RESULT');
+  }
+
   generate(options: GenerateOptions): Promise<PuzzleDefinition> {
     return this.request({ type: 'GENERATE', payload: { options } }, 'GENERATE_RESULT');
   }

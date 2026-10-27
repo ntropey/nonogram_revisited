@@ -1,18 +1,28 @@
 /*
  * Nonogram Revisited. GPL-3.0-or-later; see LICENSE.
- * Top bar: brand, solver status, and the settings popover.
+ * Top bar: brand, mode switcher, solver status, and the settings popover.
  */
 import { useEffect, useRef, useState } from 'react';
-import type { AppSettings, SolverStatus } from '../types';
+import type { AppSettings, GameMode, SolverStatus } from '../types';
 
 export function TopBar({
   settings,
   onSetSettings,
   status,
+  onSelectMode,
+  onOpenDaily,
+  onOpenImport,
+  onSharePuzzle,
+  copiedShare,
 }: {
   settings: AppSettings;
   onSetSettings: (s: AppSettings) => void;
   status: SolverStatus;
+  onSelectMode: (mode: GameMode) => void;
+  onOpenDaily: () => void;
+  onOpenImport: () => void;
+  onSharePuzzle: () => void;
+  copiedShare?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -49,7 +59,44 @@ export function TopBar({
         </span>
         Nonogram <span>Revisited</span>
       </div>
+
+      <div className="segmented mode-switcher" role="group" aria-label="Game mode">
+        <button
+          className={settings.gameMode === 'play' ? 'on' : ''}
+          onClick={() => onSelectMode('play')}
+          title="Play mode: standard solving"
+          aria-pressed={settings.gameMode === 'play'}
+        >
+          Play
+        </button>
+        <button
+          className={settings.gameMode === 'train' ? 'on' : ''}
+          onClick={() => onSelectMode('train')}
+          title="Train mode: practice techniques with the Coach"
+          aria-pressed={settings.gameMode === 'train'}
+        >
+          Train
+        </button>
+        <button
+          className={settings.gameMode === 'analyze' ? 'on' : ''}
+          onClick={() => onSelectMode('analyze')}
+          title="Analyze mode: step-by-step solver trail"
+          aria-pressed={settings.gameMode === 'analyze'}
+        >
+          Analyze
+        </button>
+      </div>
+
       <div className="topbar-actions" ref={ref}>
+        <button className="btn" onClick={onOpenDaily} title="Play today’s Daily Puzzle">
+          📅 Daily
+        </button>
+        <button className="btn" onClick={onOpenImport} title="Import puzzle string or file">
+          Import
+        </button>
+        <button className="btn" onClick={onSharePuzzle} title="Share puzzle URL to clipboard">
+          {copiedShare ? 'Copied!' : 'Share'}
+        </button>
         <span className="status-pill" data-state={status} role="status">
           {status === 'solving' ? 'Solving…' : status === 'generating' ? 'Generating…' : 'Ready'}
         </span>

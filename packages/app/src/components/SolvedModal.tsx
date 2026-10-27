@@ -3,17 +3,19 @@
  * Victory modal shown upon puzzle completion. Displays time, level, hints used, and shareable summary.
  */
 import { useEffect, useState } from 'react';
-import { LEVEL_NAMES } from '@nonogram/core';
-import type { StoredGame } from '../types';
+import { LEVEL_NAMES, serializePuzzle, NonogramBoard } from '@nonogram/core';
+import type { DailyStats, StoredGame } from '../types';
 
 interface SolvedModalProps {
   game: StoredGame;
+  dailyStats?: DailyStats | null;
   onNew: () => void;
   onClose: () => void;
 }
 
-export function SolvedModal({ game, onNew, onClose }: SolvedModalProps) {
-  const [copied, setCopied] = useState(false);
+export function SolvedModal({ game, dailyStats, onNew, onClose }: SolvedModalProps) {
+  const [copiedResult, setCopiedResult] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
@@ -27,23 +29,43 @@ export function SolvedModal({ game, onNew, onClose }: SolvedModalProps) {
   const timeFormatted = mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
 
   const levelName = game.level ? LEVEL_NAMES[game.level] : 'Casual';
+  const isDaily = game.id.startsWith('daily-');
 
-  const handleShare = () => {
-    // Generate mini-grid text card for sharing
+  const handleShareResult = () => {
     const w = game.width;
     const h = game.height;
     const filledCount = game.cells.filter((c) => c === 1).length;
+    const streakInfo = isDaily && dailyStats ? ` · 🔥 Streak: ${dailyStats.streak}` : '';
     const text = [
       `Nonogram Revisited · Solved!`,
-      `${game.title} (${w}×${h} · ${levelName})`,
+      `${game.title} (${w}×${h} · ${levelName})${streakInfo}`,
       `⏱ ${timeFormatted} · ⬛ ${filledCount} blocks`,
-      window.location.origin + '/play/',
+      window.location.origin + '/play/' + (isDaily ? '?daily=1' : ''),
     ].join('\n');
 
     if (navigator.clipboard?.writeText) {
       void navigator.clipboard.writeText(text).then(() => {
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
+        setCopiedResult(true);
+        setTimeout(() => setCopiedResult(false), 2000);
+      });
+    }
+  };
+
+  const handleShareLink = () => {
+    const board = new NonogramBoard({
+      width: game.width,
+      height: game.height,
+      rowClues: game.rowClues,
+      colClues: game.colClues,
+      title: game.title,
+    });
+    const serialized = serializePuzzle(board);
+    const url = `${window.location.origin}${window.location.pathname}?p=${encodeURIComponent(serialized)}`;
+
+    if (navigator.clipboard?.writeText) {
+      void navigator.clipboard.writeText(url).then(() => {
+        setCopiedLink(true);
+        setTimeout(() => setCopiedLink(false), 2000);
       });
     }
   };
@@ -69,10 +91,19 @@ export function SolvedModal({ game, onNew, onClose }: SolvedModalProps) {
             <span className="stat-label">Time</span>
             <span className="stat-value">{timeFormatted}</span>
           </div>
+          {isDaily && dailyStats && (
+            <div className="stat-box">
+              <span className="stat-label">Streak</span>
+              <span className="stat-value">🔥 {dailyStats.streak}</span>
+            </div>
+          )}
         </div>
-        <div className="modal-actions">
-          <button className="btn" onClick={handleShare}>
-            {copied ? 'Copied to clipboard!' : 'Share result'}
+        <div className="modal-actions" style={{ flexWrap: 'wrap', gap: '8px' }}>
+          <button className="btn" onClick={handleShareResult}>
+            {copiedResult ? 'Copied result!' : 'Copy Share Result'}
+          </button>
+          <button className="btn" onClick={handleShareLink}>
+            {copiedLink ? 'Copied link!' : 'Share Puzzle Link'}
           </button>
           <button className="btn primary" onClick={onNew} autoFocus>
             Next puzzle
