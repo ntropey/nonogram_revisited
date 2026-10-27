@@ -259,6 +259,8 @@ settings in localStorage.</p>
 do in the app, such as the puzzles you play or your settings, is sent to a server. Your answer to
 the cookie banner is remembered in local storage too, so it only asks once.</p>
 <p>The site doesn’t load advertising or analytics right now. If that changes, it will only do so after you consent through the banner.</p>
+<h2>Contact</h2>
+<p>Questions or requests can be sent to <a href="mailto:support@revisitedlabs.com">support@revisitedlabs.com</a> or filed as an issue on <a href="https://github.com/ntropey/nonogram_revisited/issues">GitHub</a>.</p>
 `,
   },
 ];
