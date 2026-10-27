@@ -38,6 +38,8 @@ export function ToolPad({
   onReset,
 }: ToolPadProps) {
   const [size, setSize] = useState(10);
+  const isAnalyze = settings.gameMode === 'analyze';
+
   return (
     <div className="toolpad">
       <div className="toolpad-group" role="group" aria-label="Paint tool">
@@ -54,7 +56,9 @@ export function ToolPad({
         </div>
         <button className="btn" onClick={onUndo} disabled={!canUndo || busy} title="Undo (Ctrl+Z)">Undo</button>
         <button className="btn" onClick={onReset} disabled={!hasGame || busy}>Reset</button>
-        <button className="btn" onClick={onHint} disabled={!hasGame || busy} title="Coach: get a step-by-step hint (H)">Coach</button>
+        <button className="btn" onClick={onHint} disabled={!hasGame || busy} title="Coach: get a step-by-step hint (H)">
+          {settings.gameMode === 'train' ? 'Coach (Train)' : 'Coach'}
+        </button>
         <button className="btn" onClick={onSolve} disabled={!hasGame || busy} title="Fill the board using the solver">Solve</button>
       </div>
       <div className="toolpad-group generator">

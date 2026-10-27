@@ -311,3 +311,6 @@ button, input, select { font: inherit; color: inherit; }
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }
 }
+
+/* Mode switcher & TopBar enhancements */
+.mode-switcher button { padding: 4px 10px; font-size: 0.85rem; }

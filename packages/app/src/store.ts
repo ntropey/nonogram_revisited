@@ -2,12 +2,13 @@
  * Nonogram Revisited. GPL-3.0-or-later; see LICENSE.
  * localStorage helpers. Stored keys are a contract — do not rename without migration.
  */
-import type { AppSettings, StoredGame, StoredSettings } from './types';
+import type { AppSettings, DailyStats, StoredGame, StoredSettings } from './types';
 
 const SETTINGS_KEY = 'nonogram.settings';
 const GAMES_KEY = 'nonogram.games';
 const LIBRARY_KEY = 'nonogram.library';
 const MODE_KEY = 'nonogram.mode';
+const DAILY_KEY = 'nonogram.daily';
 
 export function loadSettings(): AppSettings {
   try {
@@ -64,6 +65,24 @@ export function loadMode(): 'play' | 'train' | 'analyze' {
   return 'play';
 }
 
+export function loadDailyStats(): DailyStats {
+  try {
+    const raw = localStorage.getItem(DAILY_KEY);
+    if (!raw) return { lastCompletedDate: '', streak: 0, history: {} };
+    return JSON.parse(raw) as DailyStats;
+  } catch {
+    return { lastCompletedDate: '', streak: 0, history: {} };
+  }
+}
+
+export function saveDailyStats(stats: DailyStats): void {
+  try {
+    localStorage.setItem(DAILY_KEY, JSON.stringify(stats));
+  } catch {
+    // non-critical
+  }
+}
+
 export function saveMode(mode: 'play' | 'train' | 'analyze'): void {
   try {
     localStorage.setItem(MODE_KEY, mode);
@@ -82,4 +101,4 @@ const DEFAULT_SETTINGS_EXPORT: AppSettings = {
 };
 
 export type { StoredGame, StoredSettings };
-export { SETTINGS_KEY, GAMES_KEY, LIBRARY_KEY, MODE_KEY };
+export { SETTINGS_KEY, GAMES_KEY, LIBRARY_KEY, MODE_KEY, DAILY_KEY };

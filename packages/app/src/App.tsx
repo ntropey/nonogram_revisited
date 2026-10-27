@@ -1,29 +1,40 @@
 /*
  * Nonogram Revisited. GPL-3.0-or-later; see LICENSE.
- * Root application: wires settings, stored games, and the solver client together.
+ * Root application: wires settings, stored games, daily puzzles, sharing, modes, and the solver client.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { SolverClient } from './solverClient';
-import { loadGames, loadSettings, saveGames, saveSettings } from './store';
-import { autoCrossCompleted, findMistakes, isSolved } from './game';
+import { loadDailyStats, loadGames, loadMode, loadSettings, saveDailyStats, saveGames, saveMode, saveSettings } from './store';
+import { autoCrossCompleted, findMistakes, isSolved, paintCells } from './game';
 import type { PaintMode } from './game';
 import { coachMarks, mistakeMarks, proofMarks, provenState } from './coach';
 import type { CellMarks } from './coach';
 import { playSolved } from './sound';
-import type { AppSettings, Hint, SolverStatus, StoredGame } from './types';
-import type { CellState } from '@nonogram/core';
+import type { AppSettings, DailyStats, GameMode, Hint, SolverStatus, StoredGame } from './types';
+import { deserializePuzzle, serializePuzzle, NonogramBoard } from '@nonogram/core';
+import type { CellState, SolveAnalysis } from '@nonogram/core';
 import { Board } from './components/Board';
 import { TopBar } from './components/TopBar';
 import { ToolPad } from './components/ToolPad';
 import { SidePanel } from './components/SidePanel';
 import { HintPanel } from './components/HintPanel';
 import { SolvedModal } from './components/SolvedModal';
-import { paintCells } from './game';
+import { ImportModal } from './components/ImportModal';
+import { AnalyzePanel } from './components/AnalyzePanel';
 
 const MAX_GAMES = 50;
 
+function todayDateUtc(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
 export default function App() {
-  const [settings, setSettings] = useState<AppSettings>(loadSettings);
+  const [settings, setSettings] = useState<AppSettings>(() => {
+    const s = loadSettings();
+    const m = loadMode();
+    return { ...s, gameMode: m };
+  });
+  const [dailyStats, setDailyStats] = useState<DailyStats>(loadDailyStats);
   const [games, setGames] = useState<StoredGame[]>(loadGames);
   const [activeId, setActiveId] = useState<string | null>(() => loadGames()[0]?.id ?? null);
   const [status, setStatus] = useState<SolverStatus>('idle');
@@ -32,6 +43,14 @@ export default function App() {
   const [hint, setHint] = useState<Hint | null>(null);
   const [history, setHistory] = useState<Record<string, CellState[][]>>({});
   const [showModal, setShowModal] = useState<boolean>(false);
+  const [showImport, setShowImport] = useState<boolean>(false);
+  const [copiedShare, setCopiedShare] = useState<boolean>(false);
+
+  // Analyze mode state
+  const [analysis, setAnalysis] = useState<SolveAnalysis | null>(null);
+  const [analyzing, setAnalyzing] = useState<boolean>(false);
+  const [selectedAnalysisStep, setSelectedAnalysisStep] = useState<number | null>(null);
+
   const solverRef = useRef<SolverClient | null>(null);
   const strokeStart = useRef<CellState[] | null>(null);
 
@@ -40,6 +59,8 @@ export default function App() {
   activeRef.current = active;
   const settingsRef = useRef(settings);
   settingsRef.current = settings;
+  const dailyStatsRef = useRef(dailyStats);
+  dailyStatsRef.current = dailyStats;
 
   const solver = useCallback(() => (solverRef.current ??= new SolverClient()), []);
   useEffect(() => () => {
@@ -49,6 +70,7 @@ export default function App() {
 
   useEffect(() => saveSettings(settings), [settings]);
   useEffect(() => saveGames(games), [games]);
+  useEffect(() => saveDailyStats(dailyStats), [dailyStats]);
   useEffect(() => {
     document.documentElement.dataset.theme = settings.theme;
     document.querySelector('meta[name="theme-color"]')?.setAttribute('content', settings.theme === 'dark' ? '#0b1220' : '#f4f6fb');
@@ -62,6 +84,103 @@ export default function App() {
     setHistory((h) => ({ ...h, [id]: [...(h[id] ?? []).slice(-99), cells] }));
   }, []);
 
+  const handleSelectMode = useCallback((mode: GameMode) => {
+    saveMode(mode);
+    setSettings((s) => ({ ...s, gameMode: mode }));
+    setHint(null);
+    setSelectedAnalysisStep(null);
+  }, []);
+
+  const handleLoadDaily = useCallback(async (dateStr = todayDateUtc()) => {
+    const dailyId = `daily-${dateStr}`;
+    const existing = games.find((g) => g.id === dailyId);
+    if (existing) {
+      setActiveId(dailyId);
+      setHint(null);
+      return;
+    }
+
+    setStatus('generating');
+    setError(null);
+    setShowModal(false);
+    try {
+      const client = solver();
+      const def = await client.daily(dateStr, 10);
+      const solveRes = await client.solve(def);
+      const game: StoredGame = {
+        id: dailyId,
+        title: `Daily ${dateStr}`,
+        width: def.width,
+        height: def.height,
+        rowClues: def.rowClues,
+        colClues: def.colClues,
+        cells: new Array<CellState>(def.width * def.height).fill(0),
+        solution: def.solution,
+        createdAt: Date.now(),
+        mode: settingsRef.current.gameMode,
+        level: solveRes.solved ? solveRes.level : undefined,
+        score: solveRes.solved ? solveRes.score : undefined,
+        solvedAt: null,
+      };
+      setGames((all) => [game, ...all.filter((g) => g.id !== dailyId)].slice(0, MAX_GAMES));
+      setActiveId(dailyId);
+      setHint(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not generate Daily puzzle.');
+    } finally {
+      setStatus('idle');
+    }
+  }, [games, solver]);
+
+  const handleImportBoard = useCallback(async (board: NonogramBoard) => {
+    setStatus('solving');
+    setError(null);
+    try {
+      const client = solver();
+      const def = board.toDefinition();
+      const solveRes = await client.solve(def);
+      const newId = `imported-${Date.now()}`;
+      const game: StoredGame = {
+        id: newId,
+        title: board.title || `Imported ${board.width}×${board.height}`,
+        width: board.width,
+        height: board.height,
+        rowClues: board.rowClues,
+        colClues: board.colClues,
+        cells: board.cells ? [...board.cells] : new Array<CellState>(board.width * board.height).fill(0),
+        solution: def.solution,
+        createdAt: Date.now(),
+        mode: settingsRef.current.gameMode,
+        level: solveRes.solved ? solveRes.level : undefined,
+        score: solveRes.solved ? solveRes.score : undefined,
+        solvedAt: null,
+      };
+      setGames((all) => [game, ...all].slice(0, MAX_GAMES));
+      setActiveId(newId);
+      setHint(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not analyze imported puzzle.');
+    } finally {
+      setStatus('idle');
+    }
+  }, [solver]);
+
+  // Deep-link handling on mount (?daily=1 and ?p=...)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('daily') === '1') {
+      void handleLoadDaily();
+    } else {
+      const p = params.get('p');
+      if (p) {
+        const board = deserializePuzzle(p);
+        if (board) {
+          void handleImportBoard(board);
+        }
+      }
+    }
+  }, [handleLoadDaily, handleImportBoard]);
+
   const handleGenerate = useCallback(async (size: number) => {
     setStatus('generating');
     setError(null);
@@ -70,8 +189,7 @@ export default function App() {
       const client = solver();
       const level = settingsRef.current.preferredDifficulty ?? undefined;
       const def = await client.generate({ size, seed: Date.now(), maxAttempts: 600, maxTimeMs: 5000, level });
-      // The generator rates every board it accepts, so skip a duplicate full solve.
-      const analysis =
+      const analysisRes =
         def.level !== undefined
           ? { solved: true, level: def.level, score: def.score ?? 0 }
           : await client.solve(def);
@@ -86,8 +204,8 @@ export default function App() {
         solution: def.solution,
         createdAt: Date.now(),
         mode: settingsRef.current.gameMode,
-        level: analysis.solved ? analysis.level : undefined,
-        score: analysis.solved ? analysis.score : undefined,
+        level: analysisRes.solved ? analysisRes.level : undefined,
+        score: analysisRes.solved ? analysisRes.score : undefined,
         solvedAt: null,
       };
       setGames((all) => [game, ...all].slice(0, MAX_GAMES));
@@ -99,6 +217,40 @@ export default function App() {
       setStatus('idle');
     }
   }, [solver]);
+
+  // Analyze mode: fetch full SolveAnalysis when active puzzle changes or in analyze mode
+  useEffect(() => {
+    if (settings.gameMode !== 'analyze' || !active) {
+      setAnalysis(null);
+      setSelectedAnalysisStep(null);
+      return;
+    }
+
+    let canceled = false;
+    setAnalyzing(true);
+    const client = solver();
+    client
+      .solve({
+        width: active.width,
+        height: active.height,
+        rowClues: active.rowClues,
+        colClues: active.colClues,
+        title: active.title,
+      })
+      .then((res) => {
+        if (!canceled) {
+          setAnalysis(res);
+          setAnalyzing(false);
+        }
+      })
+      .catch(() => {
+        if (!canceled) setAnalyzing(false);
+      });
+
+    return () => {
+      canceled = true;
+    };
+  }, [settings.gameMode, active, solver]);
 
   const handleStrokeStart = useCallback(() => {
     strokeStart.current = activeRef.current?.cells ?? null;
@@ -120,9 +272,33 @@ export default function App() {
       if (crossed !== g) next = { ...g, cells: crossed.cells };
     }
     if (!g.solvedAt && isSolved(next)) {
-      next = { ...next, solvedAt: Date.now() };
+      const now = Date.now();
+      next = { ...next, solvedAt: now };
       setShowModal(true);
       if (settingsRef.current.sound) playSolved();
+
+      // Check daily streak tracking
+      if (g.id.startsWith('daily-')) {
+        const today = todayDateUtc();
+        const currentStats = dailyStatsRef.current;
+        const lastDate = currentStats.lastCompletedDate;
+        let newStreak = currentStats.streak;
+
+        if (lastDate !== today) {
+          const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+          newStreak = lastDate === yesterday ? currentStats.streak + 1 : 1;
+          const durationSec = Math.max(1, Math.round((now - g.createdAt) / 1000));
+          const updated: DailyStats = {
+            lastCompletedDate: today,
+            streak: newStreak,
+            history: {
+              ...currentStats.history,
+              [today]: { seconds: durationSec, hintsUsed: 0 },
+            },
+          };
+          setDailyStats(updated);
+        }
+      }
     }
     if (next !== activeRef.current) updateActive(() => next);
     if (before.some((c, i) => c !== g.cells[i])) pushHistory(g.id, before);
@@ -162,16 +338,16 @@ export default function App() {
     setStatus('solving');
     setError(null);
     try {
-      const analysis = await solver().solve({
+      const res = await solver().solve({
         width: g.width,
         height: g.height,
         rowClues: g.rowClues,
         colClues: g.colClues,
         title: g.title,
       });
-      if (analysis.solved && analysis.finalCells) {
+      if (res.solved && res.finalCells) {
         pushHistory(g.id, g.cells);
-        updateActive((cur) => ({ ...cur, cells: analysis.finalCells, solvedAt: null }));
+        updateActive((cur) => ({ ...cur, cells: res.finalCells, solvedAt: null }));
         setHint(null);
       } else {
         setError('The solver could not completely deduce this puzzle.');
@@ -187,6 +363,7 @@ export default function App() {
     setActiveId(id);
     setHint(null);
     setShowModal(false);
+    setSelectedAnalysisStep(null);
   }, []);
 
   const handleDelete = useCallback((id: string) => {
@@ -213,9 +390,11 @@ export default function App() {
     setStatus('solving');
     setError(null);
     try {
+      const disabled = settingsRef.current.gameMode === 'train' ? settingsRef.current.disabledTechniques : undefined;
       const step = await solver().nextStep(
         { width: g.width, height: g.height, rowClues: g.rowClues, colClues: g.colClues, title: g.title },
         g.cells,
+        disabled,
       );
       setHint(step ? { kind: 'step', step, stage: 1 } : { kind: 'stuck' });
     } catch (e) {
@@ -270,6 +449,26 @@ export default function App() {
     settle({ ...g, cells }, g.cells);
   }, [hint, settle]);
 
+  const handleSharePuzzle = useCallback(() => {
+    const g = activeRef.current;
+    if (!g) return;
+    const board = new NonogramBoard({
+      width: g.width,
+      height: g.height,
+      rowClues: g.rowClues,
+      colClues: g.colClues,
+      title: g.title,
+    });
+    const serialized = serializePuzzle(board);
+    const url = `${window.location.origin}${window.location.pathname}?p=${encodeURIComponent(serialized)}`;
+    if (navigator.clipboard?.writeText) {
+      void navigator.clipboard.writeText(url).then(() => {
+        setCopiedShare(true);
+        setTimeout(() => setCopiedShare(false), 2000);
+      });
+    }
+  }, []);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const el = e.target as HTMLElement | null;
@@ -289,7 +488,17 @@ export default function App() {
   }, [handleUndo, handleHint]);
 
   const gridMarks = useMemo<CellMarks | null>(() => {
-    if (!active || !hint) return null;
+    if (!active) return null;
+
+    // In analyze mode, if a step is selected, highlight that step's deduction
+    if (settings.gameMode === 'analyze' && analysis?.steps && selectedAnalysisStep !== null) {
+      const step = analysis.steps[selectedAnalysisStep];
+      if (step) {
+        return coachMarks(step, 4, active.width, active.height);
+      }
+    }
+
+    if (!hint) return null;
     if (hint.kind === 'step') return coachMarks(hint.step, hint.stage, active.width, active.height);
     if (hint.kind === 'mistakes') return mistakeMarks(hint.cells);
     if (hint.kind === 'proof') {
@@ -297,14 +506,23 @@ export default function App() {
       return trace ? { ...proofMarks(trace, active.width, active.height) } : { [hint.cell]: 'hint-key' };
     }
     return null;
-  }, [active, hint]);
+  }, [active, hint, settings.gameMode, analysis, selectedAnalysisStep]);
 
   const busy = status !== 'idle';
   const canUndo = (active && (history[active.id]?.length ?? 0) > 0) || false;
 
   return (
     <div className="app">
-      <TopBar settings={settings} onSetSettings={setSettings} status={status} />
+      <TopBar
+        settings={settings}
+        onSetSettings={setSettings}
+        status={status}
+        onSelectMode={handleSelectMode}
+        onOpenDaily={() => void handleLoadDaily()}
+        onOpenImport={() => setShowImport(true)}
+        onSharePuzzle={handleSharePuzzle}
+        copiedShare={copiedShare}
+      />
       <div className="app-body">
         <main className="stage">
           <ToolPad
@@ -342,15 +560,37 @@ export default function App() {
             onNew={() => handleGenerate(active?.width ?? 10)}
           />
         </main>
-        <SidePanel games={games} activeId={activeId} onSelect={handleSelect} onDelete={handleDelete}>
+        <SidePanel
+          games={games}
+          activeId={activeId}
+          settings={settings}
+          onSetSettings={setSettings}
+          onSelect={handleSelect}
+          onDelete={handleDelete}
+        >
+          {settings.gameMode === 'analyze' && (
+            <AnalyzePanel
+              analysis={analysis}
+              loading={analyzing}
+              selectedStep={selectedAnalysisStep}
+              onSelectStep={setSelectedAnalysisStep}
+            />
+          )}
           {hint && <HintPanel hint={hint} width={active?.width ?? 1} onNext={handleNextStage} onApply={handleApplyHint} onDismiss={() => setHint(null)} />}
         </SidePanel>
       </div>
       {showModal && active?.solvedAt && (
         <SolvedModal
           game={active}
+          dailyStats={dailyStats}
           onNew={() => handleGenerate(active.width)}
           onClose={() => setShowModal(false)}
+        />
+      )}
+      {showImport && (
+        <ImportModal
+          onImport={(b) => void handleImportBoard(b)}
+          onClose={() => setShowImport(false)}
         />
       )}
     </div>

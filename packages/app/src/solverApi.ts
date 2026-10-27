@@ -7,6 +7,7 @@ import {
   NonogramStepFinder,
   analyzePuzzle,
   countSolutions,
+  dailyPuzzle,
   generatePuzzle,
   traceHypothesis,
 } from '@nonogram/core';
@@ -35,6 +36,10 @@ export function handleMessage(message: WorkerMessage): WorkerReply {
         type: 'STEP_RESULT',
         payload: new NonogramStepFinder().findNextStep(board, { disabledTechniques: disabled }),
       };
+    }
+    case 'DAILY': {
+      const board = dailyPuzzle(message.payload.date, message.payload.size);
+      return { type: 'GENERATE_RESULT', payload: board.toDefinition() };
     }
     case 'GENERATE': {
       const board = generatePuzzle(message.payload.options);

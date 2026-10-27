@@ -16,15 +16,30 @@ export const manualPage = {
   path: 'manual/index.html',
   title: 'Manual',
   active: 'manual',
-  description: 'How to use the Nonogram Revisited app: tools, the Coach, the Why? prover, the library, settings and shortcuts.',
+  description: 'How to use the Nonogram Revisited app: tools, modes, daily puzzles, sharing, the Coach, the Why? prover, the library, settings and shortcuts.',
   body: `
 <h1>Manual</h1>
 <p>A reference for the <a href="/play/">Nonogram Revisited app</a>. New to Nonograms? Start with
 <a href="/learn/how-to-play/">How to play</a>.</p>
 <nav class="toc" aria-label="On this page">
-<a href="#puzzles">Puzzles</a> <a href="#painting">Painting</a> <a href="#coach">Coach</a> <a href="#why">Why?</a>
+<a href="#modes">Game modes</a> <a href="#daily">Daily puzzle &amp; sharing</a> <a href="#puzzles">Puzzles</a> <a href="#painting">Painting</a> <a href="#coach">Coach</a> <a href="#why">Why?</a>
 <a href="#library">Library</a> <a href="#settings">Settings</a> <a href="#keys">Shortcuts</a> <a href="#data">Your data</a>
 </nav>
+
+<h2 id="modes">Game modes</h2>
+<p>Switch between three game modes in the top bar:</p>
+<ul>
+<li><strong>Play</strong>: Standard distraction-free solving experience.</li>
+<li><strong>Train</strong>: Practice mode with technique filtering. Uncheck techniques you want the Coach to skip to practice specific deduction patterns.</li>
+<li><strong>Analyze</strong>: Solver analysis view. Displays the rated difficulty, score, and the step-by-step human solve path. Click any step to inspect the deduction on the board.</li>
+</ul>
+
+<h2 id="daily">Daily puzzle &amp; sharing</h2>
+<ul>
+<li><strong>Daily Puzzle</strong>: Press <strong>📅 Daily</strong> or open <code>/play/?daily=1</code> to play today's date-seeded puzzle. Track your daily solving streak.</li>
+<li><strong>Share</strong>: Copy a direct link to the current puzzle (via <code>?p=...</code>) to share with friends. When you finish a puzzle, use <strong>Copy Share Result</strong> or <strong>Share Puzzle Link</strong>.</li>
+<li><strong>Import</strong>: Press <strong>Import</strong> to paste compact strings (<code>WxH:rows:cols</code>), <code>.non</code> files, JSON definitions, or ASCII bitmap grids.</li>
+</ul>
 
 <h2 id="puzzles">Puzzles</h2>
 <p>Choose a <strong>Size</strong> (5 to 30) and optionally a <strong>Level</strong>, then press <strong>New
@@ -91,7 +106,7 @@ ${SHORTCUTS.map((s) => `<tr><td><kbd>${s.label}</kbd></td><td>${s.action}</td></
 </table>
 
 <h2 id="data">Your data</h2>
-<p>Settings and puzzles are stored in your browser's local storage, and the app works offline once
+<p>Settings, game mode, daily streak, and puzzles are stored in your browser's local storage, and the app works offline once
 loaded. Clearing site data for this site removes them. Nothing you do in the app is sent to a server.</p>
 <p><a class="play-link" href="/play/">Open the app &rarr;</a></p>
 `,
