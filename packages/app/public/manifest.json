@@ -3,7 +3,7 @@
   "name": "Nonogram Revisited",
   "short_name": "Nonogram",
   "description": "Free browser Nonogram (Picross) solver, generator, and trainer with step-by-step hints, a four-stage coach, contradiction proofs, and offline play.",
-  "start_url": "/",
+  "start_url": "/play/",
   "scope": "/",
   "display": "standalone",
   "background_color": "#0b1220",
