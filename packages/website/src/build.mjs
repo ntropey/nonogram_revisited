@@ -117,7 +117,7 @@ function shell({ path, title, body, active, description }) {
   const fullTitle = `${title} — Nonogram Revisited`;
   const canonical = canonicalUrl(path);
   const desc = description || DEFAULT_DESCRIPTION;
-  const ogImage = `${SITE_URL}icon-512.png`;
+  const ogImage = `${SITE_URL}og-image.png`;
   const jsonLd = JSON.stringify({
     '@context': 'https://schema.org',
     '@graph': [
@@ -161,9 +161,9 @@ function shell({ path, title, body, active, description }) {
 <meta property="og:description" content="${escapeHtml(desc)}" />
 <meta property="og:url" content="${escapeHtml(canonical)}" />
 <meta property="og:image" content="${escapeHtml(ogImage)}" />
-<meta property="og:image:width" content="512" />
-<meta property="og:image:height" content="512" />
-<meta property="og:image:alt" content="Nonogram Revisited app icon" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="Nonogram Revisited Open Graph preview" />
 <meta name="twitter:card" content="summary" />
 <meta name="twitter:title" content="${escapeHtml(fullTitle)}" />
 <meta name="twitter:description" content="${escapeHtml(desc)}" />
@@ -295,7 +295,7 @@ export async function build() {
   }
 
   // Copy icons to root for marketing site
-  const publicIcons = ['icon.svg', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'];
+  const publicIcons = ['icon.svg', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png', 'og-image.png'];
   const appPublic = join(ROOT, 'packages', 'app', 'public');
   for (const icon of publicIcons) {
     try {
