@@ -48,4 +48,12 @@ describe('website build', () => {
     expect(html).toContain('__nonogram_consent');
     expect(html).toContain('/play/');
   });
+
+  it('emits an Android App Links template', async () => {
+    const links = JSON.parse(await readFile(join(DIST, '.well-known/assetlinks.json'), 'utf8'));
+    expect(links[0].relation[0]).toBe('delegate_permission/common.handle_all_urls');
+    expect(links[0].target.namespace).toBe('android_app');
+    expect(links[0].target.package_name).toBe('com.revisitedlabs.nonogram');
+    expect(links[0].target.sha256_cert_fingerprints[0]).toBe('PLACEHOLDER_SHA256_CERT_FINGERPRINT');
+  });
 });

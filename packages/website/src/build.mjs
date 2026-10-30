@@ -315,6 +315,26 @@ export async function build() {
     await writeFile(join(DIST, 'robots.txt'), `User-agent: *\nAllow: /\nSitemap: ${base}sitemap.xml\n`);
   }
 
+  // Android App Links: template with placeholder package name and SHA256 signing fingerprint.
+  await mkdir(join(DIST, '.well-known'), { recursive: true });
+  await writeFile(
+    join(DIST, '.well-known', 'assetlinks.json'),
+    JSON.stringify(
+      [
+        {
+          relation: ['delegate_permission/common.handle_all_urls'],
+          target: {
+            namespace: 'android_app',
+            package_name: 'com.revisitedlabs.nonogram',
+            sha256_cert_fingerprints: ['PLACEHOLDER_SHA256_CERT_FINGERPRINT'],
+          },
+        },
+      ],
+      null,
+      2,
+    ) + '\n',
+  );
+
   console.log(`Built ${pages.length} pages to ${DIST}`);
 }
 
