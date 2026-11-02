@@ -326,7 +326,10 @@ export async function build() {
           target: {
             namespace: 'android_app',
             package_name: 'com.revisitedlabs.nonogram',
-            sha256_cert_fingerprints: ['PLACEHOLDER_SHA256_CERT_FINGERPRINT'],
+            sha256_cert_fingerprints: [
+            'A0:EE:B1:99:C2:EA:E2:20:42:C2:E3:24:C0:68:93:CB:B7:8C:1F:AF:45:51:3C:1C:C7:A3:67:01:A6:57:3D:73',
+            '42:DE:28:72:A5:93:C8:7F:94:53:B0:E3:33:C8:C7:87:32:2F:8F:71:05:22:DE:C8:FD:BD:ED:45:79:93:73:6C',
+          ],
           },
         },
       ],

@@ -54,6 +54,6 @@ describe('website build', () => {
     expect(links[0].relation[0]).toBe('delegate_permission/common.handle_all_urls');
     expect(links[0].target.namespace).toBe('android_app');
     expect(links[0].target.package_name).toBe('com.revisitedlabs.nonogram');
-    expect(links[0].target.sha256_cert_fingerprints[0]).toBe('PLACEHOLDER_SHA256_CERT_FINGERPRINT');
+    expect(links[0].target.sha256_cert_fingerprints).toContain('A0:EE:B1:99:C2:EA:E2:20:42:C2:E3:24:C0:68:93:CB:B7:8C:1F:AF:45:51:3C:1C:C7:A3:67:01:A6:57:3D:73');
   });
 });
