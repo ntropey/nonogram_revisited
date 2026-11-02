@@ -189,11 +189,11 @@ function shell({ path, title, body, active, description }) {
 <main id="main">${body}</main>
 <footer>
   <p style="font-size:.75rem;margin-top:8px">
-    More tools:
+    Part of <a href="https://revisitedlabs.com/" target="_blank" rel="noopener noreferrer"><strong>Revisited Labs</strong></a>:
     <a href="https://hodokurevisited.com/" target="_blank" rel="noopener noreferrer">Hodoku Revisited</a> ·
+    <a href="https://logisimrevisited.com/" target="_blank" rel="noopener noreferrer">Logisim Revisited</a> ·
     <a href="https://kakurorevisited.com/" target="_blank" rel="noopener noreferrer">Kakuro Revisited</a> ·
-    <a href="https://nonogramrevisited.com/" target="_blank" rel="noopener noreferrer">Nonogram Revisited</a> ·
-    <a href="https://logisimrevisited.com/" target="_blank" rel="noopener noreferrer">Logisim Revisited</a>
+    <a href="https://dolcecolore.com/" target="_blank" rel="noopener noreferrer">Dolce Colore</a>
   </p>
 </footer>
 <script type="module">${GATE_MJS}</script>

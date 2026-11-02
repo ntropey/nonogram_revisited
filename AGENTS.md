@@ -80,6 +80,14 @@ Before finishing a change, run `pnpm typecheck` and `pnpm test`, and the affecte
 - UI text is in **American spelling** (color, practicing, behavior, center, labeled). A website test
   fails if British spellings appear in the app, website, docs or README.
 
+## Branding and sister sites
+
+Nonogram Revisited is part of **[Revisited Labs](https://revisitedlabs.com)**.
+- Follow the master brand identity and design tokens defined in `c:\dev\revisited_labs\BRAND.md` and `c:\dev\revisited_labs\docs\brand-guidelines.md`.
+- Keep user-facing copy in **American spelling**.
+- Always refer to the coach as a **Symbolic AI Coach** or **Socratic Coach** (not a chatbot or LLM); solving logic is deterministic and runs locally.
+- Maintain the footer endorsement link to `https://revisitedlabs.com` and cross-links to sister sites (`hodokurevisited.com`, `logisimrevisited.com`, `kakurorevisited.com`).
+
 ## Git and pull requests
 
 - **`main` deploys and is protected.** Every push to `main` runs `.github/workflows/pages.yml` and

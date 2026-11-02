@@ -117,6 +117,9 @@ export function TopBar({
                 onChange={(e) => onSetSettings({ ...settings, theme: e.target.checked ? 'light' : 'dark' })}
               />
             </label>
+            <div style={{ marginTop: '12px', fontSize: '0.78rem', color: 'var(--muted)' }}>
+              Part of <a href="https://revisitedlabs.com/" target="_blank" rel="noreferrer">Revisited Labs</a>
+            </div>
           </div>
         )}
       </div>
