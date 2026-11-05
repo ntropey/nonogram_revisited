@@ -13,17 +13,20 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
+    "@capacitor/core": "^8.6.0",
     "@nonogram/core": "workspace:*",
     "react": "^19.3.1",
     "react-dom": "^19.3.1"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.6.0",
+    "@capacitor/ios": "^8.6.0",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^4.7.0",
+    "jsdom": "^26.0.0",
     "typescript": "~5.6.3",
     "vite": "^8.3.4",
-    "vitest": "^5.0.5",
-    "jsdom": "^26.0.0"
+    "vitest": "^5.0.5"
   }
 }
