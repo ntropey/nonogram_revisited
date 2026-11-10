@@ -111,6 +111,18 @@ describe('shell', () => {
     expect(html).toContain("localStorage.setItem(KEY, choice)");
     expect(html).toContain("className = 'consent'");
   });
+
+  it('emits Cloudflare Pages _headers for security and caching', async () => {
+    const headers = await readFile(join(DIST, '_headers'), 'utf8');
+    expect(headers).toContain('max-age=31536000, immutable');
+    expect(headers).toContain('X-Frame-Options: DENY');
+  });
+
+  it('links to Microsoft Store and Google Play on the home page and footer', async () => {
+    const html = await readFile(join(DIST, 'index.html'), 'utf8');
+    expect(html).toContain('https://apps.microsoft.com/detail/9NX070GGVD44');
+    expect(html).toContain('https://play.google.com/store/apps/details?id=com.revisitedlabs.nonogram');
+  });
 });
 
 describe('seo metadata', () => {

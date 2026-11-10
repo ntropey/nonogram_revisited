@@ -188,6 +188,11 @@ function shell({ path, title, body, active, description }) {
 </header>
 <main id="main">${body}</main>
 <footer>
+  <p style="font-size:0.85rem;margin-bottom:8px">
+    <a href="https://apps.microsoft.com/detail/9NX070GGVD44" target="_blank" rel="noopener noreferrer">Microsoft Store</a> ·
+    <a href="https://play.google.com/store/apps/details?id=com.revisitedlabs.nonogram" target="_blank" rel="noopener noreferrer">Google Play</a> ·
+    <a href="https://github.com/ntropey/nonogram_revisited" target="_blank" rel="noopener noreferrer">GitHub</a>
+  </p>
   <p style="font-size:.75rem;margin-top:8px">
     Part of <a href="https://revisitedlabs.com/" target="_blank" rel="noopener noreferrer"><strong>Revisited Labs</strong></a>:
     <a href="https://hodokurevisited.com/" target="_blank" rel="noopener noreferrer">Hodoku Revisited</a> ·
@@ -220,10 +225,14 @@ and a Contradiction Prover. Licensed GPL-3.0-or-later.</p>
 <p>Nine human-style solving techniques in strict difficulty order, from Full Line &amp; Zero Line up to
 Line Contradiction (Bifurcation). Every puzzle is rated deterministically and verified unique without
 guessing whenever possible.</p>
-<h2>PWA</h2>
+<h2>PWA &amp; Store Apps</h2>
 <p>Play offline. The React app runs the solver and generator in a Web Worker and stores games and
 settings in localStorage.</p>
-<p><a class="play-link" href="/play/">Open the app &rarr;</a></p>
+<p style="display:flex;gap:0.75rem;flex-wrap:wrap;align-items:center;margin-top:1rem">
+  <a class="play-link" href="/play/">Open the app &rarr;</a>
+  <a class="play-link" style="background:#1e293b;border:1px solid #334155;color:#e2e8f0;display:inline-flex;align-items:center;gap:6px" href="https://apps.microsoft.com/detail/9NX070GGVD44" target="_blank" rel="noopener noreferrer" title="Get Nonogram Revisited on Microsoft Store"><svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M0 2.222L6.5 1.333v6.222H0V2.222zm7.5-1.469L16 0v7.556H7.5V.753zM0 8.444h6.5v6.223L0 13.778V8.444zm7.5 0H16V16l-8.5-.753V8.444z"/></svg>Microsoft Store</a>
+  <a class="play-link" style="background:#1e293b;border:1px solid #334155;color:#e2e8f0;display:inline-flex;align-items:center;gap:6px" href="https://play.google.com/store/apps/details?id=com.revisitedlabs.nonogram" target="_blank" rel="noopener noreferrer" title="Get Nonogram Revisited on Google Play"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3.609 1.814L13.792 12 3.61 22.186a2.158 2.158 0 0 1-.61-.925V2.739c.143-.377.362-.693.609-.925zm11.235 11.238L5.352 22.544l10.97-6.326-1.478-3.166zm1.052-2.104l2.062 1.192c.792.457.792 1.201 0 1.658l-2.062 1.192-1.39-2.021 1.39-2.021zM5.352 1.456l9.492 9.492 1.478-3.166L5.352 1.456z"/></svg>Google Play</a>
+</p>
 <h2>Site</h2>
 <ul>
 <li><a href="/techniques/">Technique guides</a> with inline SVG line-deduction diagrams</li>
@@ -307,9 +316,42 @@ export async function build() {
   // ads.txt for Google AdSense authorization
   await writeFile(join(DIST, 'ads.txt'), 'google.com, pub-6409516653999633, DIRECT, f08c47fec0942fa0\n');
 
+  // Cloudflare Pages edge cache headers & security policies
+  await writeFile(
+    join(DIST, '_headers'),
+    `/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  X-Frame-Options: DENY
+  Permissions-Policy: camera=(), microphone=(), geolocation=()
+
+/play/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/icon.svg
+  Cache-Control: public, max-age=31536000, immutable
+
+/icon-192.png
+  Cache-Control: public, max-age=31536000, immutable
+
+/icon-512.png
+  Cache-Control: public, max-age=31536000, immutable
+
+/apple-touch-icon.png
+  Cache-Control: public, max-age=31536000, immutable
+
+/og-image.png
+  Cache-Control: public, max-age=31536000, immutable
+`,
+  );
+
   // sitemap.xml + robots.txt when SITE_URL is configured.
   if (SITE_URL) {
     const base = SITE_URL.endsWith('/') ? SITE_URL : SITE_URL + '/';
+    const hostname = new URL(base).hostname;
+    if (hostname && !hostname.endsWith('github.io')) {
+      await writeFile(join(DIST, 'CNAME'), hostname + '\n');
+    }
     const urls = pages.map((p) => base + p.path.replace(/index\.html$/, '')).concat(base + 'play/');
     const sitemap = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map((u) => `  <url><loc>${u}</loc></url>`).join('\n')}\n</urlset>\n`;
     await writeFile(join(DIST, 'sitemap.xml'), sitemap);
