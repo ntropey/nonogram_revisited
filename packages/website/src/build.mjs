@@ -355,8 +355,22 @@ export async function build() {
     const urls = pages.map((p) => base + p.path.replace(/index\.html$/, '')).concat(base + 'play/');
     const sitemap = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map((u) => `  <url><loc>${u}</loc></url>`).join('\n')}\n</urlset>\n`;
     await writeFile(join(DIST, 'sitemap.xml'), sitemap);
-    await writeFile(join(DIST, 'robots.txt'), `User-agent: *\nAllow: /\nSitemap: ${base}sitemap.xml\n`);
+    await writeFile(join(DIST, 'robots.txt'), `User-agent: *\nContent-Signal: search=yes, ai-input=yes, ai-train=no\nAllow: /\nSitemap: ${base}sitemap.xml\n`);
   }
+  await writeFile(
+    join(DIST, 'llms.txt'),
+    [
+      '# Nonogram Revisited',
+      '',
+      '> Deterministic Nonogram / Picross puzzle studio with line-solving logic coach and offline PWA support.',
+      '',
+      '## Links',
+      '- [Home](https://nonogramrevisited.com/)',
+      '- [Play Nonograms](/play/)',
+      '- [Revisited Labs](https://revisitedlabs.com/)',
+      '',
+    ].join('\n'),
+  );
 
   // Android App Links: template with placeholder package name and SHA256 signing fingerprint.
   await mkdir(join(DIST, '.well-known'), { recursive: true });
