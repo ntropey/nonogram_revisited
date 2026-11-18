@@ -1,0 +1,208 @@
+name: Build and Release iOS App
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_number:
+        description: 'CFBundleVersion / build number'
+        required: false
+        default: '2'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-release:
+    name: Build & Sign iOS App
+    runs-on: macos-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Preflight version and build number
+        env:
+          BUILD_NUMBER: ${{ github.event.inputs.build_number || '2' }}
+        run: |
+          set -euo pipefail
+          PROJECT_FILE="packages/app/ios/App/App.xcodeproj/project.pbxproj"
+
+          case "$BUILD_NUMBER" in
+            ''|*[!0-9]*|0*)
+              echo "::error::build_number must be a positive integer without leading zeros, got '$BUILD_NUMBER'."
+              exit 1
+              ;;
+          esac
+
+          VERSIONS=$(grep -oE 'MARKETING_VERSION = [^;]+;' "$PROJECT_FILE" | sed -E 's/.* = ([^;]+);/\1/' | sort -u)
+          if [ -z "$VERSIONS" ]; then
+            echo "::error::Could not read MARKETING_VERSION from $PROJECT_FILE."
+            exit 1
+          fi
+          if [ "$(printf '%s\n' "$VERSIONS" | wc -l | tr -d ' ')" -ne 1 ]; then
+            echo "::error::Inconsistent MARKETING_VERSION values: [$VERSIONS]."
+            exit 1
+          fi
+
+          MARKETING_VERSION=$(printf '%s\n' "$VERSIONS" | head -n1)
+          echo "MARKETING_VERSION=$MARKETING_VERSION" >> "$GITHUB_ENV"
+          echo "IOS_BUILD_NUMBER=$BUILD_NUMBER" >> "$GITHUB_ENV"
+          echo "Version: $MARKETING_VERSION ($BUILD_NUMBER)"
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 12
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Install dependencies and build native bundle
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm --filter @nonogram/app build:native
+
+      - name: Sync Capacitor iOS
+        run: |
+          cd packages/app
+          npx cap sync ios
+
+      - name: Verify native asset paths
+        run: |
+          HTML=packages/app/ios/App/App/public/index.html
+          if grep -q '/play/assets/' "$HTML"; then
+            echo "::error::Native bundle still references /play/assets/; the app will launch blank."
+            exit 1
+          fi
+          grep -q './assets/' "$HTML"
+
+      - name: Apply build number
+        run: |
+          BUILD_NUMBER="${IOS_BUILD_NUMBER:?IOS_BUILD_NUMBER was not set by the preflight step}"
+          sed -i '' "s/CURRENT_PROJECT_VERSION = [0-9]*;/CURRENT_PROJECT_VERSION = ${BUILD_NUMBER};/g" packages/app/ios/App/App.xcodeproj/project.pbxproj
+          grep -q "CURRENT_PROJECT_VERSION = ${BUILD_NUMBER};" packages/app/ios/App/App.xcodeproj/project.pbxproj
+
+      - name: Install Apple certificate and provisioning profile
+        env:
+          BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
+          P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
+          BUILD_PROVISION_PROFILE_BASE64: ${{ secrets.BUILD_PROVISION_PROFILE_BASE64 }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        run: |
+          if [ -z "$BUILD_CERTIFICATE_BASE64" ] || [ -z "$BUILD_PROVISION_PROFILE_BASE64" ]; then
+            echo "::error::Missing BUILD_CERTIFICATE_BASE64 or BUILD_PROVISION_PROFILE_BASE64 secrets."
+            exit 1
+          fi
+
+          CERTIFICATE_PATH=$RUNNER_TEMP/build_certificate.p12
+          PP_PATH=$RUNNER_TEMP/build_pp.mobileprovision
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+
+          echo -n "$BUILD_CERTIFICATE_BASE64" | base64 --decode -o "$CERTIFICATE_PATH"
+          echo -n "$BUILD_PROVISION_PROFILE_BASE64" | base64 --decode -o "$PP_PATH"
+
+          KEYCHAIN_PASS="${KEYCHAIN_PASSWORD:-$(uuidgen)}"
+          security create-keychain -p "$KEYCHAIN_PASS" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASS" "$KEYCHAIN_PATH"
+
+          security import "$CERTIFICATE_PATH" -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASS" "$KEYCHAIN_PATH"
+          security list-keychain -d user -s "$KEYCHAIN_PATH"
+
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          UUID=$(/usr/libexec/PlistBuddy -c "Print UUID" /dev/stdin <<< "$(security cms -D -i "$PP_PATH")")
+          cp "$PP_PATH" ~/Library/MobileDevice/Provisioning\ Profiles/"$UUID".mobileprovision
+          echo "Installed provisioning profile with UUID: $UUID"
+
+      - name: Build archive and export IPA
+        env:
+          DEVELOPMENT_TEAM: "5BJAQ969Y4"
+          CODE_SIGN_IDENTITY: "Apple Distribution"
+          BUNDLE_ID: "com.revisitedlabs.nonogram"
+        run: |
+          set -euo pipefail
+          PP_PATH=$RUNNER_TEMP/build_pp.mobileprovision
+          PROFILE_NAME=$(/usr/libexec/PlistBuddy -c "Print Name" /dev/stdin <<< "$(security cms -D -i "$PP_PATH")")
+
+          cat > "$RUNNER_TEMP/exportOptions.plist" <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key>
+            <string>app-store</string>
+            <key>teamID</key>
+            <string>$DEVELOPMENT_TEAM</string>
+            <key>signingStyle</key>
+            <string>manual</string>
+            <key>signingCertificate</key>
+            <string>$CODE_SIGN_IDENTITY</string>
+            <key>provisioningProfiles</key>
+            <dict>
+              <key>$BUNDLE_ID</key>
+              <string>$PROFILE_NAME</string>
+            </dict>
+          </dict>
+          </plist>
+          EOF
+
+          cd packages/app/ios/App
+          xcodebuild -project App.xcodeproj \
+            -scheme App \
+            -configuration Release \
+            -archivePath "$RUNNER_TEMP/App.xcarchive" \
+            archive \
+            DEVELOPMENT_TEAM="$DEVELOPMENT_TEAM" \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY="$CODE_SIGN_IDENTITY" \
+            PROVISIONING_PROFILE_SPECIFIER="$PROFILE_NAME"
+
+          xcodebuild -exportArchive \
+            -archivePath "$RUNNER_TEMP/App.xcarchive" \
+            -exportOptionsPlist "$RUNNER_TEMP/exportOptions.plist" \
+            -exportPath "$RUNNER_TEMP/build"
+
+      - name: Upload IPA to App Store Connect
+        env:
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
+          APP_STORE_CONNECT_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY_BASE64 }}
+        run: |
+          set -euo pipefail
+          if [ -z "$APP_STORE_CONNECT_KEY_ID" ] || [ -z "$APP_STORE_CONNECT_ISSUER_ID" ] || [ -z "$APP_STORE_CONNECT_PRIVATE_KEY" ]; then
+            echo "::error::Missing App Store Connect API key secrets."
+            exit 1
+          fi
+
+          mkdir -p ~/.appstoreconnect/private_keys
+          echo -n "$APP_STORE_CONNECT_PRIVATE_KEY" | base64 --decode > ~/.appstoreconnect/private_keys/AuthKey_${APP_STORE_CONNECT_KEY_ID}.p8 2>/dev/null || echo "$APP_STORE_CONNECT_PRIVATE_KEY" > ~/.appstoreconnect/private_keys/AuthKey_${APP_STORE_CONNECT_KEY_ID}.p8
+
+          UPLOAD_LOG="$RUNNER_TEMP/altool-upload.log"
+          set +e
+          xcrun altool --upload-app -f "$RUNNER_TEMP/build/App.ipa" -t ios --apiKey "$APP_STORE_CONNECT_KEY_ID" --apiIssuer "$APP_STORE_CONNECT_ISSUER_ID" 2>&1 | tee "$UPLOAD_LOG"
+          status=${PIPESTATUS[0]}
+          set -e
+
+          if [ "$status" -eq 0 ]; then
+            echo "Uploaded App.ipa to App Store Connect."
+            exit 0
+          fi
+
+          # A duplicate build number is not a product failure: the binary is already on App Store Connect.
+          if grep -Eqi 'Redundant Binary Upload|ITMS-4238|ITMS-90189|There already exists a binary upload|already been used|ENTITY_ERROR\.RELATIONSHIP\.INVALID\.INVALID_STATE' "$UPLOAD_LOG"; then
+            echo "::warning::App Store Connect already has build ${IOS_BUILD_NUMBER:-unknown} for ${MARKETING_VERSION:-unknown}; treating the duplicate upload as success."
+            exit 0
+          fi
+
+          if grep -Eqi 'bundle version must be higher|higher than the previously uploaded version' "$UPLOAD_LOG"; then
+            echo "::error::Build ${IOS_BUILD_NUMBER:-unknown} is not higher than the build already on App Store Connect. Bump CURRENT_PROJECT_VERSION and retry."
+            exit "$status"
+          fi
+
+          echo "::error::altool failed with exit code $status."
+          exit "$status"
