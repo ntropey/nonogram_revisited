@@ -3,6 +3,7 @@
  * Top bar: brand, mode switcher, solver status, and the settings popover.
  */
 import { useEffect, useRef, useState } from 'react';
+import { Capacitor } from '@capacitor/core';
 import type { AppSettings, GameMode, SolverStatus } from '../types';
 
 export function TopBar({
@@ -26,6 +27,7 @@ export function TopBar({
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const isNativeApp = Capacitor.isNativePlatform() || (typeof window !== 'undefined' && window.location.protocol === 'capacitor:');
 
   useEffect(() => {
     if (!open) return;
@@ -118,7 +120,13 @@ export function TopBar({
               />
             </label>
             <div style={{ marginTop: '12px', fontSize: '0.78rem', color: 'var(--muted)' }}>
-              Part of <a href="https://revisitedlabs.com/" target="_blank" rel="noreferrer">Revisited Labs</a>
+              {/* In native builds the attribution is inert; the link would open Safari and leave the app. */}
+              Part of{' '}
+              {isNativeApp ? (
+                <span>Revisited Labs</span>
+              ) : (
+                <a href="https://revisitedlabs.com/" target="_blank" rel="noreferrer">Revisited Labs</a>
+              )}
             </div>
           </div>
         )}
