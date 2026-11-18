@@ -1,8 +1,6 @@
 name: Build iOS App
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 jobs:
@@ -26,13 +24,22 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
-      - name: Build web application
-        run: pnpm --filter @nonogram/app build
+      - name: Build web application (native base)
+        run: pnpm --filter @nonogram/app build:native
 
       - name: Sync Capacitor iOS
         run: |
           cd packages/app
           npx cap sync ios
+
+      - name: Verify native asset paths
+        run: |
+          HTML=packages/app/ios/App/App/public/index.html
+          if grep -q '/play/assets/' "$HTML"; then
+            echo "::error::Native bundle still references /play/assets/; the app will launch blank."
+            exit 1
+          fi
+          grep -q './assets/' "$HTML"
 
       - name: Select Xcode version
         run: sudo xcode-select -s /Applications/Xcode.app

@@ -5,7 +5,7 @@ import path from 'node:path';
 export default defineConfig({
   plugins: [react()],
   root: __dirname,
-  base: '/play/',
+  base: process.env.CAPACITOR_NATIVE ? './' : '/play/',
   build: {
     outDir: path.resolve(__dirname, 'dist'),
     emptyOutDir: true,
