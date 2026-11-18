@@ -9,7 +9,7 @@ on:
       bundle_id:
         description: 'Bundle ID'
         type: string
-        default: 'com.revisitedlabs.nonogram'
+        default: 'com.revisitedlabs.nongram'
       version_name:
         description: 'Marketing version'
         type: string

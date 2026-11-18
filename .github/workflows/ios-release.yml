@@ -123,7 +123,7 @@ jobs:
         env:
           DEVELOPMENT_TEAM: "5BJAQ969Y4"
           CODE_SIGN_IDENTITY: "Apple Distribution"
-          BUNDLE_ID: "com.revisitedlabs.nonogram"
+          BUNDLE_ID: "com.revisitedlabs.nongram"
         run: |
           set -euo pipefail
           PP_PATH=$RUNNER_TEMP/build_pp.mobileprovision
