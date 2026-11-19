@@ -6,6 +6,34 @@ import { useEffect, useRef, useState } from 'react';
 import { Capacitor } from '@capacitor/core';
 import type { AppSettings, GameMode, SolverStatus } from '../types';
 
+function isAppShell(): boolean {
+  if (Capacitor.isNativePlatform()) return true;
+  if (typeof window !== 'undefined') {
+    if (window.location?.protocol === 'capacitor:') return true;
+    if (
+      typeof window.matchMedia === 'function' &&
+      (window.matchMedia('(display-mode: standalone)').matches ||
+        window.matchMedia('(display-mode: fullscreen)').matches)
+    ) {
+      return true;
+    }
+  }
+  if (
+    typeof navigator !== 'undefined' &&
+    (navigator as Navigator & { standalone?: boolean }).standalone === true
+  ) {
+    return true;
+  }
+  if (
+    typeof document !== 'undefined' &&
+    typeof document.referrer === 'string' &&
+    document.referrer.startsWith('android-app://')
+  ) {
+    return true;
+  }
+  return false;
+}
+
 export function TopBar({
   settings,
   onSetSettings,
@@ -27,7 +55,7 @@ export function TopBar({
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-  const isNativeApp = Capacitor.isNativePlatform() || (typeof window !== 'undefined' && window.location.protocol === 'capacitor:');
+  const appShell = isAppShell();
 
   useEffect(() => {
     if (!open) return;
@@ -120,9 +148,9 @@ export function TopBar({
               />
             </label>
             <div style={{ marginTop: '12px', fontSize: '0.78rem', color: 'var(--muted)' }}>
-              {/* In native builds the attribution is inert; the link would open Safari and leave the app. */}
+              {/* In native, Android TWA, or installed PWA shells the attribution is inert so it cannot leave the app. */}
               Part of{' '}
-              {isNativeApp ? (
+              {appShell ? (
                 <span>Revisited Labs</span>
               ) : (
                 <a href="https://revisitedlabs.com/" target="_blank" rel="noreferrer">Revisited Labs</a>
