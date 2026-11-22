@@ -8,7 +8,10 @@ import { Capacitor } from '@capacitor/core';
 import App from './App';
 import './index.css';
 
-if ('serviceWorker' in navigator && import.meta.env.PROD && !Capacitor.isNativePlatform()) {
+const isNativeShell =
+  Capacitor.isNativePlatform() ||
+  (typeof window !== 'undefined' && window.location.protocol === 'capacitor:');
+if ('serviceWorker' in navigator && import.meta.env.PROD && !isNativeShell) {
   const base = import.meta.env.BASE_URL;
   navigator.serviceWorker.register(`${base}sw.js`, { scope: base }).catch(() => undefined);
 }
