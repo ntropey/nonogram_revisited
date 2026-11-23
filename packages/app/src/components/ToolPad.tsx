@@ -21,6 +21,8 @@ interface ToolPadProps {
   onHint: () => void;
   onUndo: () => void;
   onReset: () => void;
+  fullscreen?: boolean;
+  onToggleFullscreen?: () => void;
 }
 
 export function ToolPad({
@@ -36,6 +38,8 @@ export function ToolPad({
   onHint,
   onUndo,
   onReset,
+  fullscreen = false,
+  onToggleFullscreen,
 }: ToolPadProps) {
   const [size, setSize] = useState(10);
   const isAnalyze = settings.gameMode === 'analyze';
@@ -60,6 +64,17 @@ export function ToolPad({
           {settings.gameMode === 'train' ? 'Coach (Train)' : 'Coach'}
         </button>
         <button className="btn" onClick={onSolve} disabled={!hasGame || busy} title="Fill the board using the solver">Solve</button>
+        {onToggleFullscreen && hasGame && (
+          <button
+            type="button"
+            className={`btn toolpad-fullscreen${fullscreen ? ' primary' : ''}`}
+            onClick={onToggleFullscreen}
+            aria-pressed={fullscreen}
+            title={fullscreen ? 'Exit fullscreen (Esc)' : 'Expand puzzle'}
+          >
+            {fullscreen ? 'Exit' : 'Expand'}
+          </button>
+        )}
       </div>
       <div className="toolpad-group generator">
         <label>

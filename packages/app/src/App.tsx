@@ -45,6 +45,8 @@ export default function App() {
   const [showModal, setShowModal] = useState<boolean>(false);
   const [showImport, setShowImport] = useState<boolean>(false);
   const [copiedShare, setCopiedShare] = useState<boolean>(false);
+  const [hintCollapsed, setHintCollapsed] = useState<boolean>(false);
+  const [fullscreen, setFullscreen] = useState<boolean>(false);
 
   // Analyze mode state
   const [analysis, setAnalysis] = useState<SolveAnalysis | null>(null);
@@ -384,6 +386,7 @@ export default function App() {
     if (!g) return;
     const wrong = findMistakes(g);
     if (wrong.length > 0) {
+      setHintCollapsed(false);
       setHint({ kind: 'mistakes', cells: wrong });
       return;
     }
@@ -396,6 +399,7 @@ export default function App() {
         g.cells,
         disabled,
       );
+      setHintCollapsed(false);
       setHint(step ? { kind: 'step', step, stage: 1 } : { kind: 'stuck' });
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not find a hint.');
@@ -417,6 +421,7 @@ export default function App() {
     }
     const wrong = findMistakes(g);
     if (wrong.length > 0) {
+      setHintCollapsed(false);
       setHint({ kind: 'mistakes', cells: wrong });
       return;
     }
@@ -426,6 +431,7 @@ export default function App() {
       const def = { width: g.width, height: g.height, rowClues: g.rowClues, colClues: g.colClues, title: g.title };
       const client = solver();
       const [fill, cross] = await Promise.all([client.trace(def, g.cells, cell, 1), client.trace(def, g.cells, cell, -1)]);
+      setHintCollapsed(false);
       setHint({ kind: 'proof', cell, fill, cross });
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not run the prover.');
@@ -473,7 +479,9 @@ export default function App() {
     const onKey = (e: KeyboardEvent) => {
       const el = e.target as HTMLElement | null;
       if (el && /^(INPUT|SELECT|TEXTAREA)$/.test(el.tagName)) return;
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+      if (e.key === 'Escape' && fullscreen && !showModal && !showImport) {
+        setFullscreen(false);
+      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
         e.preventDefault();
         handleUndo();
       } else if (!e.ctrlKey && !e.metaKey && !e.altKey) {
@@ -485,7 +493,7 @@ export default function App() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [handleUndo, handleHint]);
+  }, [handleUndo, handleHint, fullscreen, showModal, showImport]);
 
   const gridMarks = useMemo<CellMarks | null>(() => {
     if (!active) return null;
@@ -510,9 +518,18 @@ export default function App() {
 
   const busy = status !== 'idle';
   const canUndo = (active && (history[active.id]?.length ?? 0) > 0) || false;
+  const isFullscreen = fullscreen && active !== null;
+  const toggleFullscreen = useCallback(() => setFullscreen((f) => !f), []);
+  const appClass = [
+    'app',
+    isFullscreen ? 'is-fullscreen' : '',
+    hint ? (hintCollapsed ? 'has-collapsed-hint' : 'has-open-hint') : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
 
   return (
-    <div className="app">
+    <div className={appClass}>
       <TopBar
         settings={settings}
         onSetSettings={setSettings}
@@ -538,6 +555,8 @@ export default function App() {
             onHint={handleHint}
             onUndo={handleUndo}
             onReset={handleReset}
+            fullscreen={isFullscreen}
+            onToggleFullscreen={toggleFullscreen}
           />
           {error && (
             <div className="notice" role="alert">
@@ -558,6 +577,8 @@ export default function App() {
             onPaint={handlePaint}
             onStrokeEnd={handleStrokeEnd}
             onNew={() => handleGenerate(active?.width ?? 10)}
+            fullscreen={isFullscreen}
+            onToggleFullscreen={toggleFullscreen}
           />
         </main>
         <SidePanel
@@ -576,7 +597,17 @@ export default function App() {
               onSelectStep={setSelectedAnalysisStep}
             />
           )}
-          {hint && <HintPanel hint={hint} width={active?.width ?? 1} onNext={handleNextStage} onApply={handleApplyHint} onDismiss={() => setHint(null)} />}
+          {hint && (
+            <HintPanel
+              hint={hint}
+              width={active?.width ?? 1}
+              collapsed={hintCollapsed}
+              onToggleCollapse={() => setHintCollapsed((c) => !c)}
+              onNext={handleNextStage}
+              onApply={handleApplyHint}
+              onDismiss={() => setHint(null)}
+            />
+          )}
         </SidePanel>
       </div>
       {showModal && active?.solvedAt && (

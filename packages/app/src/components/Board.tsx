@@ -26,6 +26,8 @@ interface BoardProps {
   onPaint: (cells: readonly number[], target: CellState) => void;
   onStrokeEnd: () => void;
   onNew: () => void;
+  fullscreen?: boolean;
+  onToggleFullscreen?: () => void;
 }
 
 const GUIDE_EVERY = 5;
@@ -43,6 +45,8 @@ export function Board({
   onPaint,
   onStrokeEnd,
   onNew,
+  fullscreen = false,
+  onToggleFullscreen,
 }: BoardProps) {
   const [hover, setHover] = useState<number | null>(null);
   const [selectedCell, setSelectedCell] = useState<number>(0);
@@ -170,7 +174,14 @@ export function Board({
 
   return (
     <section className="board-wrap">
-      <div className="board-head">
+      <div
+        className="board-head"
+        onDoubleClick={(e) => {
+          if (!onToggleFullscreen) return;
+          if ((e.target as HTMLElement).closest('button')) return;
+          onToggleFullscreen();
+        }}
+      >
         <h2 className="board-title">{game.title}</h2>
         <div className="board-meta">
           {width}×{height}
@@ -196,6 +207,18 @@ export function Board({
                 1.4×
               </button>
             </span>
+          )}
+          {onToggleFullscreen && (
+            <button
+              type="button"
+              className={`fullscreen-btn${fullscreen ? ' on' : ''}`}
+              onClick={onToggleFullscreen}
+              aria-pressed={fullscreen}
+              aria-label={fullscreen ? 'Exit fullscreen' : 'Expand puzzle'}
+              title={fullscreen ? 'Exit fullscreen (Esc)' : 'Expand puzzle'}
+            >
+              {fullscreen ? 'Exit fullscreen' : 'Expand'}
+            </button>
           )}
         </div>
       </div>

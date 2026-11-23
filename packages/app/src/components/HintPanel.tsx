@@ -13,14 +13,91 @@ const MAX_LISTED_MOVES = 8;
 interface HintPanelProps {
   hint: Hint;
   width: number;
+  collapsed?: boolean;
+  onToggleCollapse?: () => void;
   onNext: () => void;
   onApply: () => void;
   onDismiss: () => void;
 }
 
-export function HintPanel({ hint, width, onNext, onApply, onDismiss }: HintPanelProps) {
+function hintSummary(hint: Hint): { badge: string; text: string } {
+  if (hint.kind === 'step') {
+    return { badge: 'Coach', text: `Hint ${hint.stage}/${COACH_STAGES.length}` };
+  }
+  if (hint.kind === 'proof') {
+    return { badge: 'Prover', text: 'Proof ready' };
+  }
+  if (hint.kind === 'mistakes') {
+    return {
+      badge: 'Mistakes',
+      text: `${hint.cells.length} ${hint.cells.length === 1 ? 'cell' : 'cells'}`,
+    };
+  }
+  return { badge: 'Solver', text: 'No deduction' };
+}
+
+export function HintPanel({
+  hint,
+  width,
+  collapsed = false,
+  onToggleCollapse,
+  onNext,
+  onApply,
+  onDismiss,
+}: HintPanelProps) {
+  if (collapsed) {
+    const summary = hintSummary(hint);
+    return (
+      <div className="hint-pill" role="status">
+        <button
+          type="button"
+          className="hint-pill-open"
+          onClick={onToggleCollapse}
+          aria-expanded={false}
+          aria-label={`Show ${summary.badge} hint`}
+        >
+          <span className="coach-label">{summary.badge}</span>
+          <span className="hint-pill-text">{summary.text}</span>
+          <span className="hint-pill-chevron" aria-hidden="true">▲</span>
+        </button>
+        <button
+          type="button"
+          className="btn ghost hint-pill-close"
+          onClick={onDismiss}
+          aria-label="Dismiss hint"
+          title="Dismiss"
+        >
+          ×
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="hint-panel" role="status">
+      <div className="hint-window-actions">
+        {onToggleCollapse && (
+          <button
+            type="button"
+            className="btn ghost hint-collapse"
+            onClick={onToggleCollapse}
+            aria-expanded={true}
+            aria-label="Hide hint panel"
+            title="Hide hint panel"
+          >
+            ▾
+          </button>
+        )}
+        <button
+          type="button"
+          className="btn ghost hint-close"
+          onClick={onDismiss}
+          aria-label="Dismiss hint"
+          title="Dismiss"
+        >
+          ×
+        </button>
+      </div>
       {hint.kind === 'step' && <CoachCard hint={hint} width={width} onNext={onNext} onApply={onApply} />}
       {hint.kind === 'proof' && <ProofCard hint={hint} width={width} onApply={onApply} />}
       {hint.kind === 'mistakes' && (
@@ -42,7 +119,6 @@ export function HintPanel({ hint, width, onNext, onApply, onDismiss }: HintPanel
           <p>The board is complete, or needs a technique this solver doesn’t have. Try Solve to see its progress.</p>
         </>
       )}
-      <button className="btn ghost hint-close" onClick={onDismiss} aria-label="Dismiss hint" title="Dismiss">×</button>
     </div>
   );
 }
